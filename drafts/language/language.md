@@ -1,9 +1,9 @@
-#  Language draft and requirements
+# Language draft and requirements
 1. This compiler must be backwards-compatible to original PL/0 language syntax! 
 - this is additional requirement for us (wanting to create JS compiler to go with already existing JS debugger)
 - [PL/0 Wiki](https://en.wikipedia.org/wiki/PL/0)  
 - PL/0 grammar in EBNF (Extended Backus-Naur Form)  
-```  
+```
 	program = block "." ;
 
 	block = [ "const" ident "=" number {"," ident "=" number} ";"]
@@ -24,7 +24,7 @@
 	term = factor {("*"|"/") factor};
 
 	factor = ident | number | "(" expression ")";
-```  
+```
 3. **integer** variable and constant (whole number) (not sure if this isn't basically done by the language itself)
 4.  **assignments** defined in original PL/0
 5. **basic operations (+,-,*,/,&,|,^,())(==, <=, <, >, >=)** 
@@ -51,11 +51,14 @@ This is not including any GUI points.
 ### Code examples (no coherent program, examples of possible structures)
 ```pascal
 (* constants *)
-const global_2 : string;
+const global_2 : string = "value";
 (* variables *)
-var global_1 : integer;
-(* variable withotu specified type - integer by default? *)
-var global_2;
+var global_1 : integer,
+(* 
+  variable withotu specified type - integer by default?
+  notice: var was only said once, and global_2 is separated from global_1 by ','
+*)
+global_2;
 
 (* 
   procedure ("function") declaration
@@ -138,7 +141,7 @@ end.
 
 (* 
   OPTIONAL - MAYBE WILL NOT BE IMPLEMENTED
-  
+
   array
     syntax: array-identifier = array[index-type] of element-type;
 *)

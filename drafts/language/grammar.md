@@ -38,29 +38,29 @@ factor = ident | number | "(" expression ")";
 
 ## Grammar for this project
 ```
-	program = block "." ;
+    program = block "." ;
 
-	block = [ "const" ident [":" data_type] "=" value {"," ident [":" data_type] "=" value} ";"]
-	        [ "var" ident [":" data_type] {"," ident [":" data_type]} ";"]
-	        { "procedure" ident [ "(" ident [ : data_type ] {"," ident [ : data_type ]} ")" ] ";" block ";" } statement ;
+    block = [ "const" ident [":" data_type] "=" value {"," ident [":" data_type] "=" value} ";"]
+            [ "var" ident [":" data_type] {"," ident [":" data_type]} ";"]
+            { "procedure" ident [ "(" ident [ : data_type ] {"," ident [ : data_type ]} ")" ] ";" block ";" } statement ;
 
-	statement = [ ident ":=" expression 
+    statement = [ ident ":=" expression 
                   | "call" ident
-	              | "?" ident
+                  | "?" ident
                   | "!" expression 
-	              | "begin" statement {";" statement } "end" 
-	              | "if" condition "then" statement [ "else" statement ]
-	              | "while" condition "do" statement
+                  | "begin" statement {";" statement } "end" 
+                  | "if" condition "then" statement [ "else" statement ]
+                  | "while" condition "do" statement
                   | "for" number "to" number "do" statement
                   | "foreach" array_ident "do" statement ]
                   | "return" value;
 
-	condition = "odd" expression |
-	            expression ("="|"#"|"<"|"<="|">"|">=") expression ;
+    condition = "odd" expression |
+                expression ("="|"#"|"<"|"<="|">"|">=") expression ;
 
-	expression = [ "+"|"-"] term { ("+"|"-") term};
+    expression = [ "+"|"-"] term { ("+"|"-") term};
 
-	term = factor {("*"|"/") factor};
+    term = factor {("*"|"/") factor};
 
-	factor = ident | number | value | "(" expression ")";
+    factor = ident | number | value | "(" expression ")";
 ```

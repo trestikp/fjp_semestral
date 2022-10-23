@@ -28,7 +28,7 @@
 3. **integer** variable and constant (whole number) (not sure if this isn't basically done by the language itself)
 4.  **assignments** defined in original PL/0
 5. **basic operations (+,-,*,/,&,|,^,())(==, <=, <, >, >=)** 
-6. **loops** - one is compulsory. Other loop types are for bonus points. For now lets do **for, while, foreach**
+6. **loops** - one is compulsory. Other loop types are for bonus points. For now lets try **for, while, foreach (if we will have arrays)**
 7. **simple condition** without
 8. **subprogram definition** function/ procedure and its call
 9. bonus (1pt): **else**
@@ -48,33 +48,111 @@
 Required points: 20. Points: 10 (basic required implementation) + 8 (1pt extensions) + 8 (2pt extensions) = 26 pts
 This is not including any GUI points.
   
-### Code example (hopefully including most features)  
-```pascal  
-const global_2 : string;  
-var global_1 : integer;  
+### Code examples (no coherent program, examples of possible structures)
+```pascal
+(* constants *)
+const global_2 : string;
+(* variables *)
+var global_1 : integer;
+(* variable withotu specified type - integer by default? *)
+var global_2;
+
+(* 
+  procedure ("function") declaration
+    + parameters with type 
+    + expected return value type
+*)
+procedure max(num1, num2 : integer) : integer;
+  (* procedure local variables and constants *)
+  const p1_const;
+  var p1_var;
+  (* procedure statement block *)
+  begin
+  end;
+
+(* simple if statement *)
+if num1 > num2 then
+  call do_something;
+
+(* if statement with else *)
+if num1 > num2 then
+  (* if statement block (required for multiple statements) *)
+  begin
+    statement_1;
+    statement_2;
+    call do_something;
+  end;
+else
+  (* else statement block (required for multiple statements) *)
+  begin
+    call do_else;
+  end;
+
+(* recursion should be possible *)
+procedure recursion(num : integer);
+  begin
+    if num <= 0 then 
+	  return;
+    else
+      call recursion(num - 1);
+  end;
+
+(* for loop - only steps by one from start to end (do we want to have custom step?) *)
+for 0 to 10 do
+  (* statement block (required for multiple statements) *)
+  begin
+    statements;
+  end;
+
+(* while loop - condition should be same as in if *)
+while condition do
+  (* statement block (required for multiple statements) *)
+  begin
+    statements;
+  end;
+
+(* boolean variable *)
+var bool_test : boolean;
+
+(* float variable *)
+var float_test : float;
+
+(* string variable *)
+var string_test : string;
+
+(* string concat operations *)
+string_test := string_test + "second_string";
+
+(* switch statement *)
+case expression of
+  value_1: statements;
+  value_2: begin
+             statements;
+		   end;
+end; (* end of switch *)
+
+(* main program block *)
+begin
+  statements;
+end.
+
+(* 
+  OPTIONAL - MAYBE WILL NOT BE IMPLEMENTED
   
-procedure max(num1, num2 : integer) : integer;  
-var proc_only_1 : integer;  
-begin  
-  if num1 > num2 then  
-	  begin
-			proc_only_1 := num1;  
-			return proc_only_1;  
-		end;  
-  else  
-		begin  
-			proc_only_1 := num2;  
-			return proc_only_1;  
-		end;  
-	end;  
-end;  
-  
-procedure recursion(letter : string);  
-begin  
-if letter === 'f' then return;  
-else  
-  
-begin  
-  
-end.  
+  array
+    syntax: array-identifier = array[index-type] of element-type;
+*)
+arr = array [0..10] of integer;
+
+(* 
+  OPTIONAL - MAYBE WILL NOT BE IMPLEMENTED
+
+  for-each loop - for each element in array "arr"
+  -- only meaningful if arrays will be implemented!!! 
+*)
+foreach arr do
+  (* statement block (required for multiple statements) *)
+  begin
+    statements;
+  end;
 ```

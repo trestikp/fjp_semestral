@@ -44,15 +44,29 @@ factor = ident | number | "(" expression ")";
             [ "var" ident [":" data_type] {"," ident [":" data_type]} ";"]
             { "procedure" ident [ "(" ident [ : data_type ] {"," ident [ : data_type ]} ")" ] ";" block ";" } statement ;
 
-    statement = [ ident ":=" expression 
+                (* assignment with possibility of multiple assignment *)
+    statement = [ ident ":=" {ident ":="} expression 
+                    (* parallel assignment - number of values must match number of idents *)
+                  | "{" ident {, ident} "} := {" value{, value} "}" 
+                    (* call to a procedure - reads expected number of parameters from stack. Return value is saved to stack. *)
                   | "call" ident
+                    (* no idea what this does *)
                   | "?" ident
+                    (* negation? - or no idea *)
                   | "!" expression 
+                    (* "block" of statements - allows multiple statements in place of one *)
                   | "begin" statement {";" statement } "end" 
+                    (* if (+if-else) *)
                   | "if" condition "then" statement [ "else" statement ]
+                    (* ternary operator *)
+                  | "(" condition ") ? " "return" statement ":" "return" statement
+                    (* while loop *)
                   | "while" condition "do" statement
+                    (* simple for loop with step of 1 *)
                   | "for" number "to" number "do" statement
+                    (* for-each loop *)
                   | "foreach" array_ident "do" statement ]
+                    (* procedure (and statement) return - end of procedure (statement) *)
                   | "return" value;
 
     condition = "odd" expression |

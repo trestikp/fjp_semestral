@@ -65,7 +65,7 @@ factor = ident | number | "(" expression ")";
                     (* simple for loop with step of 1 *)
                   | "for" number "to" number "do" statement
                     (* for-each loop *)
-                  | "foreach" array_ident "do" statement ]
+                  | "foreach" ident "in" array_ident "do" statement ]
                     (* procedure (and statement) return - end of procedure (statement) *)
                   | "return" value;
 

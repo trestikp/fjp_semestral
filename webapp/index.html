@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Překladač do PL0</title>
+
+    <link rel="stylesheet" href="lib/bs5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="lib/bsicons/bootstrap-icons.css">
+    <link rel="stylesheet" href="style/style.css">
+    <script src="lib/bs5/js/bootstrap.js"></script>
+    <script src="script/resizer.js"></script>
+</head>
+<body class="d-flex flex-column h-100">
+    <nav class="navbar navbar-toggleable-md bg-dark">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 flex-row">
+            <li class="nav-item">
+                <button class="btn btn-success my-2 my-sm-0 ms-2" type="submit">
+                    <i class="bi bi-cloud-upload-fill"></i>
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="btn btn-success my-2 my-sm-0 ms-2" type="submit">
+                    <i class="bi bi-play-fill"></i>
+                </button>
+            </li>
+        </ul>
+        <button class="btn btn-success me-2 my-sm-0" type="submit">
+            <i class="bi bi-terminal-fill"></i>
+        </button>
+        <button class="btn btn-success me-2 my-sm-0" type="submit">
+            <i class="bi bi-bug-fill"></i>
+        </button>
+        <button class="btn btn-success me-2 my-sm-0" type="submit">
+            <i class="bi bi-cloud-download-fill"></i>
+        </button>
+        <button class="btn btn-success me-2 my-sm-0" type="submit">
+            <i class="bi bi-clipboard-fill"></i>
+        </button>
+        </form>
+    </nav>
+    <div class="d-flex flex-column flex-grow">
+        <div class="d-flex editor flex-grow w-100 h-100 flex-row">
+            <div class="left h-100"></div>
+            <div class="resize h-100" id="resize"></div>
+            <div class="right h-100"></div>
+         </div>
+    </div>
+</body>
+</html>

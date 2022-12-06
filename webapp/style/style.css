@@ -1,0 +1,24 @@
+body {
+    margin: 0;
+    height: 100vh;
+ }
+
+ .left {
+    background-color: #dadada;
+    width: 50vw;
+ }
+ .resize {
+    background: #444857;
+    width: 14px;
+    cursor: col-resize;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+ }
+ .right {
+    flex-grow: 1;
+ }
+
+ .flex-grow {
+    flex: 1 0 auto;
+}   

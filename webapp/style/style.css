@@ -1,15 +1,29 @@
 body {
-    margin: 0;
-    height: 100vh;
+    height: 100vh !important;
+    width: 100vw !important;
+    overflow: hidden;
 }
 
 .left {
     background-color: #dadada;
     width: 50vw;
 }
-.resize {
+
+.terminal {
+    height: 200px;
+}
+
+.resize-terminal {
+    height: 14px;
+    cursor: row-resize;
+}
+
+.resize-editor {
     width: 14px;
     cursor: col-resize;
+}
+
+.resize {
     flex-shrink: 0;
     position: relative;
     z-index: 10;
@@ -33,4 +47,12 @@ body {
 
 nav.bg-light, .resize.bg-light {
     background-color: #abafb4 !important;
+}
+
+.editor::-webkit-resizer {
+    display: none;
+}
+
+.h-0 {
+    height: 0 !important;
 }

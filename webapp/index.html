@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-100">
+<html lang="en" class="p-0 m-0">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -12,17 +12,19 @@
     <script src="lib/bs5/js/bootstrap.js"></script>
     <script src="script/resizer.js"></script>
     <script src="script/modeSwitch.js"></script>
+    <script src="script/parser.js"></script>
 </head>
-<body class="d-flex flex-column h-100">
+<body class="d-flex flex-column">
+    <!-- Navbar -->
     <nav class="navbar navbar-toggleable-md bg-dark">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0 flex-row">
             <li class="nav-item">
-                <button class="btn btn-success my-2 my-sm-0 ms-2" type="submit">
+                <button class="btn btn-success my-2 my-sm-0 ms-2" type="submit" onclick="Parser.upload()">
                     <i class="bi bi-cloud-upload-fill"></i>
                 </button>
             </li>
             <li class="nav-item">
-                <button class="btn btn-success my-2 my-sm-0 ms-2" type="submit">
+                <button class="btn btn-success my-2 my-sm-0 ms-2" type="submit" onclick="Parser.parse()">
                     <i class="bi bi-play-fill"></i>
                 </button>
             </li>
@@ -30,30 +32,36 @@
         <button class="btn btn-warning me-2 my-sm-0 dark" type="submit" id="switchModeBtn">
             <i class="bi bi-brightness-high"></i>
         </button>
-        <button class="btn btn-success me-2 my-sm-0" type="submit">
+        <button class="btn btn-danger me-2 my-sm-0 shown" type="submit" id="showTermBtn" onclick="Parser.showTerminal()">
             <i class="bi bi-terminal-fill"></i>
         </button>
-        <button class="btn btn-success me-2 my-sm-0" type="submit">
+        <button class="btn btn-success me-2 my-sm-0" type="submit" onclick="Parser.debug()">
             <i class="bi bi-bug-fill"></i>
         </button>
-        <button class="btn btn-success me-2 my-sm-0" type="submit">
+        <button class="btn btn-success me-2 my-sm-0" type="submit" onclick="Parser.download()">
             <i class="bi bi-cloud-download-fill"></i>
         </button>
-        <button class="btn btn-success me-2 my-sm-0" type="submit">
+        <button class="btn btn-success me-2 my-sm-0" type="submit" onclick="Parser.copyToClipboard()">
             <i class="bi bi-clipboard-fill"></i>
         </button>
         </form>
     </nav>
+    <!-- Editor -->
     <div class="d-flex flex-column flex-grow">
         <div class="d-flex editor flex-grow w-100 h-100 flex-row">
             <div class="left h-100">
                  <textarea id="editor-in" class="editor w-100 h-100 px-2 py-2 text-light bg-dark">Some example code...</textarea>
             </div>
-            <div class="resize h-100 bg-dark" id="resize"></div>
+            <div class="resize resize-editor h-100 bg-dark" id="resize"></div>
             <div class="right h-100">
                 <textarea id="editor-out" class="editor w-100 h-100 px-2 py-2 text-light bg-dark" disabled>Some output code...</textarea>
             </div>
          </div>
+    </div>
+    <!-- Terminal -->
+    <div class="resize resize-terminal w-100 bg-dark terminalElement" id="resizeTerminal"></div>
+    <div class="terminal w-100 editor terminalElement">
+        <textarea id="editor-terminal" class="editor w-100 h-100 px-2 py-2 text-light bg-dark" disabled>ParserTerm&gt;</textarea>
     </div>
 </body>
 </html>

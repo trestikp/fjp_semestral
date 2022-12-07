@@ -1,4 +1,41 @@
 window.addEventListener("load", function() {
+    createResizeTerminal();
+    createResizeEditor();
+});
+
+function createResizeTerminal() {
+    let resize = document.querySelector("#resizeTerminal");
+    let down = document.querySelector(".terminal");
+    let editor = document.querySelectorAll(".editor");
+
+    var dragY = false;
+    resize.addEventListener("mouseup", function (e) {
+        dragY = false;
+    });
+
+    resize.addEventListener("mousedown", function (e) {
+        dragY = true;
+    });
+
+    editor.forEach(function(el) {
+        el.addEventListener("mousemove", function (e) {
+            let moveY = e.y;
+            if (dragY)
+                down.style.height =
+                document.getElementsByTagName("html")[0].getBoundingClientRect().height - moveY - resize.getBoundingClientRect().height / 2 + "px";
+            });
+    })
+
+    editor.forEach(function(el) {
+        el.addEventListener("mouseup", function (e) {
+            dragY = false;
+        });
+    })
+
+    
+}
+
+function createResizeEditor() {
     let resize = document.querySelector("#resize");
     let left = document.querySelector(".left");
     let editor = document.querySelector(".editor");
@@ -23,4 +60,4 @@ window.addEventListener("load", function() {
     editor.addEventListener("mouseup", function (e) {
     drag = false;
     });
-});
+}

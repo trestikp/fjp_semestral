@@ -1,24 +1,36 @@
 body {
     margin: 0;
     height: 100vh;
- }
+}
 
- .left {
+.left {
     background-color: #dadada;
     width: 50vw;
- }
- .resize {
-    background: #444857;
+}
+.resize {
     width: 14px;
     cursor: col-resize;
     flex-shrink: 0;
     position: relative;
     z-index: 10;
- }
- .right {
-    flex-grow: 1;
- }
+}
 
- .flex-grow {
+.right {
+    flex-grow: 1;
+}
+
+.flex-grow {
     flex: 1 0 auto;
 }   
+
+.editor.bg-dark {
+    background: #495057 !important;
+}
+
+.editor.bg-light {
+    background: #f8f9fa !important;
+}
+
+nav.bg-light, .resize.bg-light {
+    background-color: #abafb4 !important;
+}

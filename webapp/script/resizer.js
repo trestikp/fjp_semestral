@@ -1,4 +1,4 @@
-window.onload = function() {
+window.addEventListener("load", function() {
     let resize = document.querySelector("#resize");
     let left = document.querySelector(".left");
     let editor = document.querySelector(".editor");
@@ -23,4 +23,4 @@ window.onload = function() {
     editor.addEventListener("mouseup", function (e) {
     drag = false;
     });
-}
+});

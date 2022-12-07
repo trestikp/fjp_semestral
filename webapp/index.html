@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="style/style.css">
     <script src="lib/bs5/js/bootstrap.js"></script>
     <script src="script/resizer.js"></script>
+    <script src="script/modeSwitch.js"></script>
 </head>
 <body class="d-flex flex-column h-100">
     <nav class="navbar navbar-toggleable-md bg-dark">
@@ -26,6 +27,9 @@
                 </button>
             </li>
         </ul>
+        <button class="btn btn-warning me-2 my-sm-0 dark" type="submit" id="switchModeBtn">
+            <i class="bi bi-brightness-high"></i>
+        </button>
         <button class="btn btn-success me-2 my-sm-0" type="submit">
             <i class="bi bi-terminal-fill"></i>
         </button>
@@ -42,9 +46,13 @@
     </nav>
     <div class="d-flex flex-column flex-grow">
         <div class="d-flex editor flex-grow w-100 h-100 flex-row">
-            <div class="left h-100"></div>
-            <div class="resize h-100" id="resize"></div>
-            <div class="right h-100"></div>
+            <div class="left h-100">
+                 <textarea id="editor-in" class="editor w-100 h-100 px-2 py-2 text-light bg-dark">Some example code...</textarea>
+            </div>
+            <div class="resize h-100 bg-dark" id="resize"></div>
+            <div class="right h-100">
+                <textarea id="editor-out" class="editor w-100 h-100 px-2 py-2 text-light bg-dark" disabled>Some output code...</textarea>
+            </div>
          </div>
     </div>
 </body>

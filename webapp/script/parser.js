@@ -13,11 +13,15 @@ window.addEventListener("load", function() {
     public.copyToClipboard = copyToClipboard;
 
     window["Parser"] = public;
+
+    //Preapre upload file event
+    document.getElementById('upload').addEventListener('change', handleFileSelect, false);
+    writeToTerm("Welcome to PL0 parser :)");
 });
 
 /* TODO: Make private */
 function upload() {
-
+    document.getElementById('upload')?.click();
 }
 
 function parse() {
@@ -45,7 +49,7 @@ function writeToTerm(value) {
     const termName = "ParserTerm>";
     let term = document.querySelector("#editor-terminal");
 
-    term.value += value + '\n' + termName;
+    term.value += termName + value + '\n';
 }
 
 function debug() {
@@ -59,3 +63,25 @@ function download() {
 function copyToClipboard() {
 
 }
+
+/* Private methods */ 
+function handleFileSelect(evt) {
+    let files = evt.target.files; // FileList object
+  
+    // use the 1st file from the list
+    let f = files[0];
+  
+    let reader = new FileReader();
+  
+    // Closure to capture the file information.
+    reader.onload = (function(theFile) {
+      return function(e) {
+        document.getElementById("upload").value = "";
+        document.getElementById("editor-in").innerHTML = e.target.result;
+        writeToTerm("Successfully uploaded file: " + f.name);
+      };
+    })(f);
+    
+    // Read in the image file as a data URL.
+    reader.readAsText(f);
+  }

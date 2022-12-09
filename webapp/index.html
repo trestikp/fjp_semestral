@@ -19,9 +19,10 @@
     <nav class="navbar navbar-toggleable-md bg-dark">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0 flex-row">
             <li class="nav-item">
-                <button class="btn btn-success my-2 my-sm-0 ms-2" type="submit" onclick="Parser.upload()">
+                <button class="btn btn-success my-2 my-sm-0 ms-2" type="submit" data-bs-toggle="modal" data-bs-target="#uploadOverwriteModal">
                     <i class="bi bi-cloud-upload-fill"></i>
                 </button>
+                <input id="upload" type=file accept=".txt" name="files[]" size=30 style="display: none;">
             </li>
             <li class="nav-item">
                 <button class="btn btn-success my-2 my-sm-0 ms-2" type="submit" onclick="Parser.parse()">
@@ -61,7 +62,26 @@
     <!-- Terminal -->
     <div class="resize resize-terminal w-100 bg-dark terminalElement" id="resizeTerminal"></div>
     <div class="terminal w-100 editor terminalElement">
-        <textarea id="editor-terminal" class="editor w-100 h-100 px-2 py-2 text-light bg-dark" disabled>ParserTerm&gt;</textarea>
+        <textarea id="editor-terminal" class="editor w-100 h-100 px-2 py-2 text-light bg-dark" disabled></textarea>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="uploadOverwriteModal" tabindex="-1" aria-labelledby="uploadOverwriteLabel" aria-hidden="true">
+        <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+            <h5 class="modal-title" id="uploadOverwriteLabel">Overwrite existing?</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                This will overwrite all code that is already in the input window. Do you want to continue?
+            </div>
+            <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, go back to the editor.</button>
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="Parser.upload()">Yes, upload!</button>
+            </div>
+        </div>
+        </div>
     </div>
 </body>
 </html>

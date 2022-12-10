@@ -13,6 +13,9 @@
     <script src="script/resizer.js"></script>
     <script src="script/modeSwitch.js"></script>
     <script src="script/parser.js"></script>
+    <script src="script/compiler/recursive_descent.js"></script>
+    <script src="script/compiler/tokenizer.js"></script>
+    <script src="lib/jison/examples/basic_lex.js"></script>
 </head>
 <body class="d-flex flex-column">
     <!-- Navbar -->
@@ -51,7 +54,26 @@
     <div class="d-flex flex-column flex-grow">
         <div class="d-flex editor flex-grow w-100 h-100 flex-row">
             <div class="left h-100">
-                 <textarea id="editor-in" class="editor w-100 h-100 px-2 py-2 text-light bg-dark">Some example code...</textarea>
+                 <textarea id="editor-in" class="editor w-100 h-100 px-2 py-2 text-light bg-dark">var a; 
+                    procedure pr1; 
+                      var b; 
+                      procedure pr2; 
+                        var c; 
+                        begin 
+                          c:=11; 
+                          b:=22; 
+                          a:=33; 
+                          if 1=2 then call pr1; 
+                        end; 
+                      begin 
+                        a:=10; 
+                        b:=20; 
+                        call pr2; 
+                      end; 
+                    begin 
+                      a:=100; 
+                      call pr1; 
+                    end. </textarea>
             </div>
             <div class="resize resize-editor h-100 bg-dark" id="resize"></div>
             <div class="right h-100">

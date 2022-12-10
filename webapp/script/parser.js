@@ -25,7 +25,9 @@ function upload() {
 }
 
 function parse() {
-    
+    let fake_input =  document.getElementById("editor-in").value;
+    tokenizer.setInput(fake_input);
+    recursive_descent.program();
 }
 
 function showTerminal() {

@@ -29,6 +29,8 @@ number                  \d+(?:\.\d+)? // https://stackoverflow.com/questions/145
 "."                     return Symbols.dot;
 "("                     return Symbols.open_bra;
 ")"                     return Symbols.close_bra;
+"{"                     return Symbols.open_curl;
+"}"                     return Symbols.close_curl;
 "?"                     return Symbols.quest_mark;
 "!"                     return Symbols.excl_mark;
 "#"                     return Symbols.hash_mark;

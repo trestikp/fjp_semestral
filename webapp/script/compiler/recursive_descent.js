@@ -25,6 +25,8 @@ const Symbols = {
     dot:            ".",
     open_bra:       "(",
     close_bra:      ")",
+    open_curl:      "{",
+    close_curl:     "}",
     quest_mark:     "?",
     excl_mark:      "!",
     hash_mark:      "#",
@@ -94,7 +96,7 @@ let recursive_descent = (function() {
         },
     
         error: function(err_msg) {
-            console.log(err_msg);
+            console.log(tokenizer.yylineno + " - " + err_msg);
             // TODO: redirect to gui console - text area
         },
     
@@ -130,7 +132,73 @@ let recursive_descent = (function() {
         },
 
         statement: function() {
-            return false; // NYI
+            switch (this.symbol) {
+                case Symbols.ident:
+                    if (!this.statement_ident()) {
+                        return false;
+                    }
+                    break;
+                case Symbols.open_curl:
+                    if (!this.statement_open_curl()) {
+                        return false;
+                    }
+                    break;
+                case Symbols.call:
+                    if (!this.statement_call()) {
+                        return false;
+                    }
+                    break;
+                case Symbols.quest_mark:
+                    if (!this.statement_quest_mark()) {
+                        return false;
+                    }
+                    break;
+                case Symbols.excl_mark:
+                    if (!this.statement_excl_mark()) {
+                        return false;
+                    }
+                    break;
+                case Symbols.begin:
+                    if (!this.statement_begin()) {
+                        return false;
+                    }
+                    break;
+                case Symbols.if:
+                    if (!this.statement_if()) {
+                        return false;
+                    }
+                    break;
+                case Symbols.open_bra:
+                    if (!this.statement_open_bra()) {
+                        return false;
+                    }
+                    break;
+                case Symbols.while:
+                    if (!this.statement_while()) {
+                        return false;
+                    }
+                    break;
+                case Symbols.for:
+                    if (!this.statement_for()) {
+                        return false;
+                    }
+                    break;
+                case Symbols.foreach:
+                    if (!this.statement_foreach()) {
+                        return false;
+                    }
+                    break;
+                case Symbols.return:
+                    if (!this.statement_return()) {
+                        return false;
+                    }
+                    break;
+                default:
+                    this.error("Unrecognized statement: " + this.symbol_value);
+                    return false;
+            }
+
+            return true;
         },
     
         block: function() {
@@ -298,6 +366,320 @@ let recursive_descent = (function() {
             }
 
             return ident_name;
+        },
+
+
+        // statement functions
+        statement_ident: function() {
+            // first "ident" already accepted by caller
+
+            // := ident (indefinetly)
+            do {
+                if (!this.accept(Symbols.assignment)) {
+                    this.error("Statement expected assignment symbol. Statement: " + this.symbol_value);
+                    return false;
+                }
+
+                // TODO should save idents to some list
+            } while (this.accept(Symbols.ident));
+
+            // expression
+            if (!this.expression()) {
+                this.error("Assignment must end with a valid expression.");
+                return false;
+            }
+
+            // TODO: instructions assigning expression result to all identifiers
+
+            return true;
+        },
+
+        statement_open_curl: function() {
+            let ident_counter = 0;
+
+            // { accepted by caller
+
+            // ident {, ident}
+            do {
+                if (!this.accept(Symbols.ident)) {
+                    this.error(this.symbol_value + " is not an valid identifier for multiple assignment.");
+                    return false;
+                }
+
+                // TODO: store idents in array/ list - preserve indexes
+
+                ident_counter++;
+            } while (this.accept(Symbols.comma));
+
+            // } := {
+            if (this.accept(Symbols.close_curl)) {
+                this.error("Multiple assignment statement expects '}' to close identifier list.");
+                return false;
+            }
+            if (this.accept(Symbols.assignment)) {
+                this.error("Multiple assignment statement expects assignment symbol.");
+                return false;
+            }
+            if (this.accept(Symbols.open_curl)) {
+                this.error("Multiple assignment statement expects '{' to open value list.");
+                return false;
+            }
+
+            // value {, value}
+            do {
+                if (!this.accept(Symbols.input)) {
+                    this.error("Invalid value. This value is a keyword or is otherwise invalid. Value: " + this.symbol_value);
+                    return false;
+                }
+
+                // TODO: value type checking
+                // TODO: load into identifiers/ maybe load values to array or list and assign after
+
+                ident_counter--;
+            } while (this.accept(Symbols.comma));
+
+            if (ident_counter != 0) {
+                this.error("Multiple assignment statement identifier count and value count do not match.");
+                return false;
+            }
+
+            return true;
+        },
+
+        statement_call: function() {
+            // call accepted by caller
+
+            if (!this.accept(Symbols.ident)) {
+                this.error("Call failed because identifier: " + ident + " is invalid.");
+                return false;
+            }
+
+            // TODO: check that ident is a procedure identifier (stored in last_symbol_value)
+            // TODO: generate instructions
+            
+            return true;
+        },
+
+        statement_quest_mark: function() {
+            // ? accepted by caller
+
+            if (!this.accept(Symbols.ident)) {
+                this.error("? expected valid identifier.");
+                return false;
+            }
+
+            // TODO: what to do with this shit? We must have it, because it is original PL/0 grammar
+            
+            return true;
+        },
+
+        statement_excl_mark: function() {
+            // ! accepted by caller
+
+            if (!this.expression()) {
+                this.error("! doesn't end with valid expression.");
+                return false;
+            }
+
+            // TODO: what to do with this shit? We must have it, because it is original PL/0 grammar
+            
+            return true;
+        },
+
+        statement_begin: function() {
+            // begin accepted by caller
+
+            // statement {";" statement}
+            do {
+                if (!this.statement()) {
+                    this.error("Failed to process statement in command block.");
+                    return false;
+                }
+            } while (this.accept(Symbols.semicolon));
+
+            // end
+            if (!this.accept(Symbols.end)) {
+                this.error("Expected 'end' to close command block. Received: " + this.symbol_value);
+                return false;
+            }
+
+            return true;
+        },
+
+        statement_if: function() {
+            // if accepted by caller
+
+            if (!this.condition()) {
+                this.error("Failed to evaluate if condition.");
+                return false;
+            }
+
+            if (!this.accept(Symbols.then)) {
+                this.error("if condition must be followed by 'then' before statement.");
+                return false;
+            }
+
+            if (!this.statement()) {
+                this.error("Failed to execute positive branch statement.");
+                return false;
+            }
+
+            // TODO: generate positive branch instructions
+
+            if (this.accept(Symbols.else))
+                if (!this.statement()) {
+                    this.error("Failed to execute negative branch statement.");
+                    return false;
+                }
+
+                // TODO: generate negative branch instructions
+
+            return true;
+        },
+
+        statement_open_bra: function() {
+            // ( accepted by caller
+
+            // condition
+            if (!this.condition()) {
+                this.error("Failed to evaluate tenrary operator condition.");
+                return false;
+            }
+
+            // )
+            if (!this.accept(Symbols.close_bra)) {
+                this.error("Expected ')' to close the ternary operator condition but received: " + this.symbol_value);
+                return false;
+            }
+
+            // ?
+            if (!this.accept(Symbols.quest_mark)) {
+                this.error("Expected '?' for ternary operator but received: " + this.symbol_value);
+                return false;
+            }
+
+            // TODO: "internally 'return'"
+            if (!this.statement()) {
+                this.error("First statement in the ternary operator failed to execute.");
+                return false;
+            }
+
+            if (!this.accept(Symbols.quest_mark)) {
+                this.error("Expected ':' to separate ternary statements. Received: " + this.symbol_value);
+                return false;
+            }
+
+            // TODO: "internally 'return'"
+            if (!this.statement()) {
+                this.error("Second statement in the ternary operator failed to execute.");
+                return false;
+            }
+
+            // TODO: guess what, instructions
+
+            return true;
+        },
+
+        statement_while: function() {
+            // while accepted by caller
+
+            if (!this.condition()) {
+                this.error("Failed to compile while condition.");
+                return false;
+            }
+
+            if (!this.accept(Symbols.do)) {
+                this.error("Expected 'do' before while statement.");
+                return false;
+            }
+
+            if (!this.statement()) {
+                this.error("Failed to compile while statement.");
+                return false;
+            }
+
+            // TODO instruuuuctiooooooooons
+
+            return true;
+        },
+
+        statement_for: function() {
+            // for accepted by caller
+
+            let start, end;
+
+            if (!this.accept(Symbols.number)) {
+                this.error("For loop needs first number is a starting point.");
+                return false;
+            }
+
+            start = this.last_symbol_value;
+
+            if (!this.accept(Symbols.to)) {
+                this.error("For loop needs 'to' before second number.");
+                return false;
+            }
+            if (!this.accept(Symbols.number)) {
+                this.error("For loop needs first number is a ending point.");
+                return false;
+            }
+
+            end = this.last_symbol_value;
+
+            if (!this.accept(Symbols.do)) {
+                this.error("Expected 'do' before for statement.");
+                return false;
+            }
+            if (!this.statement()) {
+                this.error("Failed to compile for statement.");
+                return false;
+            }
+
+            // TODO instruuuuctiooooooooons
+
+            return true;
+        },
+
+        statement_foreach: function() {
+            // foreach accepted by caller 
+
+            let iterator;
+
+            if (!this.accept(Symbols.ident)) {
+                this.error("foreach first ident error");
+                return false;
+            }
+
+            if (!this.accept(Symbols.in)) {
+                this.error("foreach missing in");
+                return false;
+            }
+            if (!this.accept(Symbols.ident)) {
+                this.error("foreach wrong array ident");
+                return false;
+            }
+
+
+            if (!this.accept(Symbols.do)) {
+                this.error("Expected 'do' before foreach statement.");
+                return false;
+            }
+            if (!this.statement()) {
+                this.error("Failed to compile foreach statement.");
+                return false;
+            }
+
+            // TODO: blah blah
+
+            return true;
+        },
+
+        statement_return: function() {
+            // return accepted by caller
+
+            // returns value - what is value? factor?
+
+            return true;
         },
     });
     return descent;

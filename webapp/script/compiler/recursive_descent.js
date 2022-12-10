@@ -116,19 +116,109 @@ let recursive_descent = (function() {
         // },
 
         condition: function() {
+            if (this.accept(Symbols.odd)) {
+                if (!this.expression()) {
+                    this.error("Failed to evaluate 'odd' expression.");
+                    return false;
+                }
 
+                // TODO: insctructions
+
+                return true;
+            } else if (this.expression()) {
+                // TODO cases
+                switch (this.symbol) {
+                    case Symbols.eq:
+                        break;
+                    case Symbols.hash_mark:
+                        break;
+                    case Symbols.lt:
+                        break;
+                    case Symbols.lte:
+                        break;
+                    case Symbols.gt:
+                        break;
+                    case Symbols.gte:
+                        break;
+                    default:
+                        this.error("Unrecognized comparison operation.");
+                }
+
+                if (!this.expression()) {
+                    this.error("Failed to evaluate second expression.");
+                    return false;
+                }
+
+                return true;
+            }
+
+            this.error("This code is not a condition: " + this.symbol_value);
+            return false;
         },
 
         expression: function() {
+            if (this.accept(Symbols.plus) || this.accept(Symbols.minus)) {
+                // last_symbol - add some instruction or we
+            }
 
+            if (!this.term()) {
+                this.error("failed to evaluate term");
+                return false;
+            }
+
+            while (this.accept(Symbols.plus) || this.accept(Symbols.minus)) {
+                if (!this.term()) {
+                    this.error("failed to evaluate term");
+                    return false;
+                }
+            }
+
+            return true;
         },
 
         term: function() {
+            if (!this.factor()) {
+                this.error("term failed to compile factor");
+                return false;
+            }
 
+            while (this.accept(Symbols.star) || this.accept(Symbols.slash)) {
+                // last_symbol contains which one it is
+                
+                if (!this.factor()) {
+                    this.error("term failed to compile factor");
+                    return false;
+                }   
+            }
+
+            return true;
         },
 
         factor: function() {
+            if (this.accept(Symbols.ident)) {
+                // TODO verify ident is valid, instructions
+                return true;
+            } else if (this.accept(Symbols.number)) {
+                // TODO instructions
+                return true;
+            } else if (this.accept(Symbols.input)) {
+                // validate input for value (string, bool)
+                return true;
+            } else if (this.accept(Symbols.open_bra)) {
+                if (!this.expression()) {
+                    this.error("failed to compile expression insinde factor");
+                    return false;
+                }
+                if (!this.accept(Symbols.close_bra)) {
+                    this.error("factor expression must be close by bracket ')'");
+                    return false;
+                }
 
+                return true;
+            }
+
+            this.error("Unrecognized factor: " + this.symbol_value);
+            return false;
         },
 
         statement: function() {

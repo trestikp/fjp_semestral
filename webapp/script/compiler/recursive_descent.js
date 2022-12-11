@@ -61,6 +61,7 @@ let recursive_descent = (function() {
         last_symbol_value: null,
         symbol_value: null,
         symbol_counter: 0, // increases when lexer parses symbol - can be used to underline syntax errors (should correspond to error word)
+        compilationErrors: [],
     
         /**
          * Loads next symbol from lexer (tokenizer) into symbol variable. 
@@ -96,9 +97,11 @@ let recursive_descent = (function() {
         },
     
         error: function(err_msg) {
-            // yylineno seems to start from 0
-            console.log((tokenizer.yylineno + 1) + " - " + err_msg);
-            // TODO: redirect to gui console - text area
+            this.compilationErrors.push({
+                line: tokenizer.yylineno + 1,
+                err: err_msg,
+                symbol: this.symbol_value
+            });
         },
     
         // not using this fuction, because using only accept if enough for custom errors
@@ -347,11 +350,14 @@ let recursive_descent = (function() {
         },
     
         program: function() {
+            this.compilationErrors = []; //Empty the errors ftom previous iterations
             this.next_sym();
             if (!this.block())
-                return; // failed to parse the body of the program - dot won't be reached by tokenizer (lexer)
+                return this.compilationErrors; // failed to parse the body of the program - dot won't be reached by tokenizer (lexer)
             if (!this.accept(Symbols.dot))
                 this.error("The program MUST end with '.' (dot)");
+
+            return this.compilationErrors;
         },
     
         /******

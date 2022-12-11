@@ -9,7 +9,11 @@
     <link rel="stylesheet" href="lib/bs5/css/bootstrap.min.css">
     <link rel="stylesheet" href="lib/bsicons/bootstrap-icons.css">
     <link rel="stylesheet" href="style/style.css">
-    <script src="lib/bs5/js/bootstrap.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-/bQdsTh/da6pkI1MST/rWKFNjaCP5gBSY4sEBT38Q/9RBh9AH40zEOg7Hlq2THRZ" crossorigin="anonymous"></script>
+    <!--<script src="lib/bs5/js/bootstrap.js"></script>
+    <script src="lib/popper/popper.min.js"></script>-->
+    <script src="lib/jquery/jquery.min.js"></script>
     <script src="script/resizer.js"></script>
     <script src="script/modeSwitch.js"></script>
     <script src="script/parser.js"></script>
@@ -52,28 +56,13 @@
     </nav>
     <!-- Editor -->
     <div class="d-flex flex-column flex-grow">
-        <div class="d-flex editor flex-grow w-100 h-100 flex-row">
+        <div class="d-flex editor flex-grow w-100 h-100 flex-row" style="overflow: none;">
             <div class="left h-100">
-                 <textarea id="editor-in" class="editor w-100 h-100 px-2 py-2 text-light bg-dark">var a; 
-                    procedure pr1; 
-                      var b; 
-                      procedure pr2; 
-                        var c; 
-                        begin 
-                          c:=11; 
-                          b:=22; 
-                          a:=33; 
-                          if 1=2 then call pr1; 
-                        end; 
-                      begin 
-                        a:=10; 
-                        b:=20; 
-                        call pr2; 
-                      end; 
-                    begin 
-                      a:=100; 
-                      call pr1; 
-                    end. </textarea>
+                 <div contenteditable="true" id="editor-in" class="editor w-100 h-100 px-2 py-2 text-light bg-dark">
+                        <!-- Example content-->
+                        <div>var a;&nbsp;</div><div>procedure pr1;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>var b;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>procedure pr2;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>var c;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>begin&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>c:=11;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>b:=22;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>a:=33;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>if 1=2 then call pr1;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>end;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>begin&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>a:=10;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>b:=20;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>call pr2;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>end;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>begin&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>a:=100;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>call pr1;&nbsp;</div><div><span style="font-family: var(--bs-font-sans-serif); font-size: 1rem;"><span contenteditable="false" class="tab">  </span>end.</span></div>
+                        <!-- Example content end-->
+                </div>
             </div>
             <div class="resize resize-editor h-100 bg-dark" id="resize"></div>
             <div class="right h-100">
@@ -84,7 +73,7 @@
     <!-- Terminal -->
     <div class="resize resize-terminal w-100 bg-dark terminalElement" id="resizeTerminal"></div>
     <div class="terminal w-100 editor terminalElement">
-        <textarea id="editor-terminal" class="editor w-100 h-100 px-2 py-2 text-light bg-dark" disabled></textarea>
+        <div id="editor-terminal" class="editor w-100 h-100 px-2 py-2 text-light bg-dark"></div>
     </div>
 
     <!-- Modal -->

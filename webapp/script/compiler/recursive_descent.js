@@ -96,7 +96,8 @@ let recursive_descent = (function() {
         },
     
         error: function(err_msg) {
-            console.log(tokenizer.yylineno + " - " + err_msg);
+            // yylineno seems to start from 0
+            console.log((tokenizer.yylineno + 1) + " - " + err_msg);
             // TODO: redirect to gui console - text area
         },
     
@@ -129,16 +130,22 @@ let recursive_descent = (function() {
                 // TODO cases
                 switch (this.symbol) {
                     case Symbols.eq:
+                        this.accept(Symbols.eq);
                         break;
                     case Symbols.hash_mark:
+                        this.accept(Symbols.hash_mark);
                         break;
                     case Symbols.lt:
+                        this.accept(Symbols.lt);
                         break;
                     case Symbols.lte:
+                        this.accept(Symbols.lte);
                         break;
                     case Symbols.gt:
+                        this.accept(Symbols.gt);
                         break;
                     case Symbols.gte:
+                        this.accept(Symbols.gte);
                         break;
                     default:
                         this.error("Unrecognized comparison operation.");
@@ -287,6 +294,9 @@ let recursive_descent = (function() {
                     this.error("Unrecognized statement: " + this.symbol_value);
                     return false;
             }
+
+            // TODO: if this is here, it only consumes the first command in a block (= scope)
+            // this.accept(Symbols.semicolon); // statement can (but doesn't have to be) ended with ';'
 
             return true;
         },
@@ -460,8 +470,11 @@ let recursive_descent = (function() {
 
 
         // statement functions
+
+
         statement_ident: function() {
-            // first "ident" already accepted by caller
+            // first "ident" already verified by caller
+            this.accept(Symbols.ident);
 
             // := ident (indefinetly)
             do {
@@ -487,7 +500,8 @@ let recursive_descent = (function() {
         statement_open_curl: function() {
             let ident_counter = 0;
 
-            // { accepted by caller
+            // { verified by caller
+            this.accept(Symbols.open_curl);
 
             // ident {, ident}
             do {
@@ -537,7 +551,8 @@ let recursive_descent = (function() {
         },
 
         statement_call: function() {
-            // call accepted by caller
+            // call verified by caller
+            this.accept(Symbols.call);
 
             if (!this.accept(Symbols.ident)) {
                 this.error("Call failed because identifier: " + ident + " is invalid.");
@@ -551,7 +566,8 @@ let recursive_descent = (function() {
         },
 
         statement_quest_mark: function() {
-            // ? accepted by caller
+            // ? verified by caller
+            this.accept(Symbols.quest_mark)
 
             if (!this.accept(Symbols.ident)) {
                 this.error("? expected valid identifier.");
@@ -564,7 +580,8 @@ let recursive_descent = (function() {
         },
 
         statement_excl_mark: function() {
-            // ! accepted by caller
+            // ! verified by caller
+            this.accept(Symbols.excl_mark);
 
             if (!this.expression()) {
                 this.error("! doesn't end with valid expression.");
@@ -577,11 +594,14 @@ let recursive_descent = (function() {
         },
 
         statement_begin: function() {
-            // begin accepted by caller
+            // begin verified by caller
+            this.accept(Symbols.begin);
 
             // statement {";" statement}
             do {
                 if (!this.statement()) {
+                    if (this.last_symbol_value == Symbols.semicolon && this.symbol_value == Symbols.end) break; // TODO: this is ugly quick fix for testing
+
                     this.error("Failed to process statement in command block.");
                     return false;
                 }
@@ -597,7 +617,8 @@ let recursive_descent = (function() {
         },
 
         statement_if: function() {
-            // if accepted by caller
+            // if verified by caller
+            this.accept(Symbols.if);
 
             if (!this.condition()) {
                 this.error("Failed to evaluate if condition.");
@@ -628,7 +649,8 @@ let recursive_descent = (function() {
         },
 
         statement_open_bra: function() {
-            // ( accepted by caller
+            // ( verified by caller
+            this.accept(Symbols.open_bra);
 
             // condition
             if (!this.condition()) {
@@ -671,7 +693,8 @@ let recursive_descent = (function() {
         },
 
         statement_while: function() {
-            // while accepted by caller
+            // while verified by caller
+            this.accept(Symbols.while);
 
             if (!this.condition()) {
                 this.error("Failed to compile while condition.");
@@ -694,7 +717,8 @@ let recursive_descent = (function() {
         },
 
         statement_for: function() {
-            // for accepted by caller
+            // for verified by caller
+            this.accept(Symbols.for);
 
             let start, end;
 
@@ -731,7 +755,8 @@ let recursive_descent = (function() {
         },
 
         statement_foreach: function() {
-            // foreach accepted by caller 
+            // foreach verified by caller 
+            this.accept(Symbols.foreach);
 
             let iterator;
 
@@ -765,7 +790,8 @@ let recursive_descent = (function() {
         },
 
         statement_return: function() {
-            // return accepted by caller
+            // return verified by caller
+            this.accept(Symbols.return);
 
             // returns value - what is value? factor?
 

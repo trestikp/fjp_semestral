@@ -376,40 +376,44 @@ case 23:return Symbols.open_bra;
 break;
 case 24:return Symbols.close_bra;
 break;
-case 25:return Symbols.quest_mark;
+case 25:return Symbols.open_curl;
 break;
-case 26:return Symbols.excl_mark;
+case 26:return Symbols.close_curl;
 break;
-case 27:return Symbols.hash_mark;
+case 27:return Symbols.quest_mark;
 break;
-case 28:return Symbols.eq;
+case 28:return Symbols.excl_mark;
 break;
-case 29:return Symbols.lte;
+case 29:return Symbols.hash_mark;
 break;
-case 30:return Symbols.lt;
+case 30:return Symbols.eq;
 break;
-case 31:return Symbols.gte;
+case 31:return Symbols.lte;
 break;
-case 32:return Symbols.gt;
+case 32:return Symbols.lt;
 break;
-case 33:return Symbols.plus;
+case 33:return Symbols.gte;
 break;
-case 34:return Symbols.minus;
+case 34:return Symbols.gt;
 break;
-case 35:return Symbols.star;
+case 35:return Symbols.plus;
 break;
-case 36:return Symbols.slash;
+case 36:return Symbols.minus;
 break;
-case 37:return Symbols.ident;
+case 37:return Symbols.star;
 break;
-case 38:return Symbols.number;
+case 38:return Symbols.slash;
 break;
-case 39:return Symbols.input;
+case 39:return Symbols.ident;
+break;
+case 40:return Symbols.number;
+break;
+case 41:return Symbols.input;
 break;
 }
 },
-rules: [/^(?:\s+)/,/^(?:begin\b)/,/^(?:call\b)/,/^(?:const\b)/,/^(?:do\b)/,/^(?:else\b)/,/^(?:end\b)/,/^(?:foreach\b)/,/^(?:for\b)/,/^(?:if\b)/,/^(?:in\b)/,/^(?:odd\b)/,/^(?:procedure\b)/,/^(?:return\b)/,/^(?:then\b)/,/^(?:to\b)/,/^(?:var\b)/,/^(?:while\b)/,/^(?::=)/,/^(?::)/,/^(?:;)/,/^(?:,)/,/^(?:\.)/,/^(?:\()/,/^(?:\))/,/^(?:\?)/,/^(?:!)/,/^(?:#)/,/^(?:=)/,/^(?:<=)/,/^(?:<)/,/^(?:>=)/,/^(?:>)/,/^(?:\+)/,/^(?:-)/,/^(?:\*)/,/^(?:\/)/,/^(?:([a-zA-Z][a-zA-Z0-9]*))/,/^(?:(\d+(?:\.\d+)?))/,/^(?:.)/],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39],"inclusive":true}}
+rules: [/^(?:\s+)/,/^(?:begin\b)/,/^(?:call\b)/,/^(?:const\b)/,/^(?:do\b)/,/^(?:else\b)/,/^(?:end\b)/,/^(?:foreach\b)/,/^(?:for\b)/,/^(?:if\b)/,/^(?:in\b)/,/^(?:odd\b)/,/^(?:procedure\b)/,/^(?:return\b)/,/^(?:then\b)/,/^(?:to\b)/,/^(?:var\b)/,/^(?:while\b)/,/^(?::=)/,/^(?::)/,/^(?:;)/,/^(?:,)/,/^(?:\.)/,/^(?:\()/,/^(?:\))/,/^(?:\{)/,/^(?:\})/,/^(?:\?)/,/^(?:!)/,/^(?:#)/,/^(?:=)/,/^(?:<=)/,/^(?:<)/,/^(?:>=)/,/^(?:>)/,/^(?:\+)/,/^(?:-)/,/^(?:\*)/,/^(?:\/)/,/^(?:([a-zA-Z][a-zA-Z0-9]*))/,/^(?:(\d+(?:\.\d+)?))/,/^(?:.)/],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41],"inclusive":true}}
 });
 return lexer;
 })();

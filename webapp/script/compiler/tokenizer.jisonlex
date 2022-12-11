@@ -9,7 +9,7 @@ number                  \d+(?:\.\d+)? // https://stackoverflow.com/questions/145
 "call"                  return Symbols.call;
 "const"                 return Symbols.const;
 "do"                    return Symbols.do;
-"else"                  return Symbols.else;
+"else"                  return Symbols.else
 "end"                   return Symbols.end;
 "foreach"               return Symbols.foreach;
 "for"                   return Symbols.for;

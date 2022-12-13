@@ -1,0 +1,51 @@
+{
+    "title": "PL/0",
+    "bntBack": "Step back",
+    "btnForward": "Step forward",
+    "btnPlay": "Run",
+    "btnReset": "Reset",
+    "headerInstructions": "Instructions",
+    "headerStack": "Stack",
+    "headerHeap": "Heap",
+    "headerInput": "Input",
+    "headerOutput": "Output",
+    "headerWarnings": "Warnings",
+
+    "notAllocated": "Not allocated",
+    "notAllocatedMeta": "Not allocated, contains block metadata",
+    "allocated": "Allocated",
+    "allocatedMeta": "Allocated, contains block metadata",
+
+    "heapCellIndex": "Index",
+    "heapCellValue": "Value",
+
+    "instructionsParsingState": "Instructions parsing",
+    "instructionsValidationState": "Instructions validation",
+    "inputFileLoaded": "Instructions file successfully loaded",
+    "inputFileError": "Could not process input file.",
+    "inputFileErrorNotText": "Could not process input file. Only text files are allowed",
+    "cannotsaveNoInstructions": "No valid instructions found, can not save.",
+    "btnLoadInstructions": "Load/Edit instructions",
+    "instructionsModalHeader": "Load/Edit instructions",
+    "btnSave": "Save",
+    "btnCancel": "Cancel",
+
+    "instructionsTableInstruction": "Instruction",
+    "instructionsTableLevel": "Level",
+    "instructionsTablePar": "Par",
+    "instructionsTableExplanation": "Explanation",
+
+    "stackSP": "SP",
+    "stackBase": "Base",
+    "stackSPSeparator": "Stack pointer delimiter",
+
+    "stackSB": "Caller static base",
+    "stackDB": "Caller dynamic base",
+    "stackPC": "Caller program counter",
+
+    "help": "Help",
+    "ok": "Ok",
+
+    "createdBy": "Created by Lukáš Vlček and Vojtěch Bartička, parser integration created by Tomáš Linhart and Pavel Třeštík",
+    "workInfo": "Semestral work for KIV/FJP, FAV ZČU 2021/2022, FAV ZČU 2022/2023"
+}

@@ -1,3 +1,6 @@
+//TODO: Move to config
+const DEBUGGER_IP = "http://localhost:3000";
+
 /** 
  * Event listener that binds all parsing functions to one public namespace.
  */
@@ -20,15 +23,65 @@ window.addEventListener("load", function() {
 
     initEditorHandlers();
     initPopover();
-
+    initDebugger();
+    initEditorMaxHeight();
 });
 
 /* TODO: Make private */
 
 let lastErrors = [];
+let debuggerReady = false;
+
+function initEditorMaxHeight() {
+    let middleEditor = document.querySelector(".middle-editor");
+
+    middleEditor.style.maxHeight = middleEditor.getBoundingClientRect().height + "px";
+}
 
 function upload() {
     document.getElementById('upload')?.click();
+}
+
+function initDebugger() {
+    window.addEventListener('message', handleIntegrationMessage);
+
+    let debuggerFrame = document.getElementById("debuggerIframe");
+    debuggerFrame.src = DEBUGGER_IP;
+};
+
+function handleIntegrationMessage(event) {
+    const data = event.data;
+
+    if (data.target == "integration") {
+        if (data.event == "READY") {
+            debuggerReady = true;
+        } else if (data.event == "COMPILATION_ERROR") {
+            const parseErrors = data.data.parseErrors;
+            for (const errorIndex in parseErrors) {
+                const currError = parseErrors[errorIndex];
+
+                Parser.writeToTerm("Debugger parse error: " + currError.error, "red");
+            }
+
+            const validationErrors = data.data.validationErrors;
+            for (const errorIndex in validationErrors) {
+                const currError = validationErrors[errorIndex];
+
+                Parser.writeToTerm("Debugger validation error: " + currError.error, "red");
+            }
+        } else if (data.event == "DEBUGGER_START") {
+            let debuggerFrame = document.getElementById("debuggerIframe");
+            let debugButton = document.getElementById("showDebugBtn");
+            const navbar = document.getElementsByTagName("nav")[0];
+            
+            debuggerFrame.style.visibility = "shown";
+            debuggerFrame.style.top = navbar.getBoundingClientRect().height + "px";
+            debuggerFrame.style.height = "calc(100vh - " + navbar.getBoundingClientRect().height + "px)";
+
+            debugButton?.classList.remove("hidden", "btn-success");
+            debugButton?.classList.add("shown", "btn-danger");
+        }
+    }
 }
 
 function initPopover() {
@@ -171,16 +224,21 @@ function prepareErrors() {
 
 function showTerminal() {
     const showTerminalButton = document.querySelector("#showTermBtn");
-    const terminalElements = document.querySelectorAll(".terminalElement")
+    const terminalElements = document.querySelectorAll(".terminalElement");
+    let middleEditor = document.querySelector(".middle-editor");
     
     if(showTerminalButton.classList.contains("shown")) {
         showTerminalButton.classList.remove("shown", "btn-danger");
         showTerminalButton.classList.add("hidden", "btn-success");
 
+        middleEditor.classList.add("console-hidden");
+
         terminalElements.forEach((el) => {el.classList.add("h-0")})
     } else {
         showTerminalButton.classList.remove("hidden", "btn-success");
         showTerminalButton.classList.add("shown", "btn-danger");
+
+        middleEditor.classList.remove("console-hidden");
 
         terminalElements.forEach((el) => {el.classList.remove("h-0")})
     }
@@ -198,7 +256,33 @@ function writeToTerm(value, color) {
 }
 
 function debug() {
+    let debugButton = document.getElementById("showDebugBtn");
+    let debuggerFrame = document.getElementById("debuggerIframe");
 
+    if (debugButton?.classList.contains("shown")) {
+        debuggerFrame.style.top = "99.99vh";
+
+        debugButton?.classList.add("hidden", "btn-success");
+        debugButton?.classList.remove("shown", "btn-danger");
+
+        return;
+    }
+
+    if (!debuggerReady) {
+        Parser.writeToTerm("Debugger is not ready.", "red");
+        return;
+    }
+
+    const debugCode = document.getElementById("editor-out")?.textContent;
+    debuggerFrame.contentWindow.postMessage(
+        {
+            "target": "integration",
+            "event": "debug",
+            "debugCode": debugCode
+        }, 
+    "*");
+
+    Parser.writeToTerm("Sent code to debugger..");
 }
 
 function download() {
@@ -206,7 +290,39 @@ function download() {
 }
 
 function copyToClipboard() {
+    var textArea = document.getElementById("editor-out");
 
+    if (!navigator.clipboard){
+        debugger;
+        textArea.disabled = false;
+        textArea.select();
+        var success = document.execCommand('copy');
+        if (success) {
+            Parser.writeToTerm("Sucessfully copied to clipboard.", "green");
+        } else {
+            Parser.writeToTerm("Error copying to clipboard.", "red");
+        }
+        textArea.disabled = true;
+
+        if (window.getSelection().empty) {  // Chrome
+            window.getSelection().empty();
+        } else if (window.getSelection().removeAllRanges) {  // Firefox
+            window.getSelection().removeAllRanges();
+        }
+    } else{
+        navigator.clipboard.writeText(textArea?.textContent).then(
+            function(){
+                Parser.writeToTerm("Sucessfully copied to clipboard.", "green");
+                let element = document.getElementById("copyButton");
+                element.innerHTML = '<i class="bi bi-check-lg"></i>';
+
+                setTimeout(() => {
+                    element.innerHTML = '<i class="bi bi-clipboard-fill"></i>';
+                }, 3000)
+            }).catch((err) => {
+                Parser.writeToTerm("Error copying to clipboard. Error: " + err, "red");
+            })
+    }
 }
 
 /* Private methods */ 

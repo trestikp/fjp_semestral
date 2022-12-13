@@ -43,21 +43,21 @@
         <button class="btn btn-danger me-2 my-sm-0 shown" type="submit" id="showTermBtn" onclick="Parser.showTerminal()">
             <i class="bi bi-terminal-fill"></i>
         </button>
-        <button class="btn btn-success me-2 my-sm-0" type="submit" onclick="Parser.debug()">
+        <button class="btn btn-success me-2 my-sm-0" type="submit" id="showDebugBtn" class="hidden" onclick="Parser.debug()">
             <i class="bi bi-bug-fill"></i>
         </button>
         <button class="btn btn-success me-2 my-sm-0" type="submit" onclick="Parser.download()">
             <i class="bi bi-cloud-download-fill"></i>
         </button>
-        <button class="btn btn-success me-2 my-sm-0" type="submit" onclick="Parser.copyToClipboard()">
+        <button class="btn btn-success me-2 my-sm-0" type="submit" id="copyButton" onclick="Parser.copyToClipboard()">
             <i class="bi bi-clipboard-fill"></i>
         </button>
         </form>
     </nav>
     <!-- Editor -->
-    <div class="d-flex flex-column flex-grow">
-        <div class="d-flex editor flex-grow w-100 h-100 flex-row" style="overflow: none;">
-            <div class="left h-100">
+    <div class="d-flex flex-column flex-grow middle-editor">
+        <div class="d-flex editor flex-grow w-100 h-100 flex-row" style="overflow: hidden;">
+            <div class="left">
                  <div contenteditable="true" id="editor-in" class="editor w-100 h-100 px-2 py-2 text-light bg-dark">
                         <!-- Example content-->
                         <div>var a;&nbsp;</div><div>procedure pr1;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>var b;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>procedure pr2;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>var c;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>begin&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>c:=11;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>b:=22;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>a:=33;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>if 1=2 then call pr1;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>end;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>begin&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>a:=10;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>b:=20;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>call pr2;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>end;&nbsp;</div><div><span contenteditable="false" class="tab">  </span>begin&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>a:=100;&nbsp;</div><div><span contenteditable="false" class="tab">  </span><span contenteditable="false" class="tab">  </span>call pr1;&nbsp;</div><div><span style="font-family: var(--bs-font-sans-serif); font-size: 1rem;"><span contenteditable="false" class="tab">  </span>end.</span></div>
@@ -66,7 +66,26 @@
             </div>
             <div class="resize resize-editor h-100 bg-dark" id="resize"></div>
             <div class="right h-100">
-                <textarea id="editor-out" class="editor w-100 h-100 px-2 py-2 text-light bg-dark" disabled>Some output code...</textarea>
+                <textarea id="editor-out" class="editor w-100 h-100 px-2 py-2 text-light bg-dark" disabled>
+0  JMP         0        13
+1  JMP         0         2
+2  INT         0         3
+3  LOD         1         3
+4  LIT         0         1
+5  OPR         0         2
+6  STO         1         3
+7  LOD         1         3
+8  LIT         0         2
+9  OPR         0        13
+10  JMC         0        12
+11  CAL         1         2
+12  RET         0         0
+13  INT         0         4
+14  LIT         0         0
+15  STO         0         3
+16  CAL         0         2
+17  RET         0         0
+                </textarea>
             </div>
          </div>
     </div>
@@ -94,5 +113,8 @@
         </div>
         </div>
     </div>
+    <iframe id="debuggerIframe" class="debugger">
+
+    </iframe>
 </body>
 </html>

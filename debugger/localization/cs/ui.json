@@ -1,0 +1,51 @@
+{
+    "title": "PL/0",
+    "bntBack": "Krok zpět",
+    "btnForward": "Krok vpřed",
+    "btnPlay": "Spustit",
+    "btnReset": "Obnovit",
+    "headerInstructions": "Instrukce",
+    "headerStack": "Zásobník",
+    "headerHeap": "Halda",
+    "headerInput": "Vstup",
+    "headerOutput": "Výstup",
+    "headerWarnings": "Varování",
+
+    "notAllocated": "Nealokováno",
+    "notAllocatedMeta": "Nealokováno, obsahuje metadata bloku",
+    "allocated": "Alokováno",
+    "allocatedMeta": "Alokováno, obsahuje metadata bloku",
+
+    "heapCellIndex": "Index",
+    "heapCellValue": "Hodnota",
+
+    "instructionsParsingState": "Parsování instrukcí",
+    "instructionsValidationState": "Validace instrukcí",
+    "inputFileLoaded": "Soubor s instrukcemi úspěšně načten",
+    "inputFileError": "Nepodařilo se zpracovat soubor s instrukcemi",
+    "inputFileErrorNotText": "Nepodařilo se zpracovat soubor s instrukcemi. Nahráváte textový soubor?",
+    "cannotsaveNoInstructions": "Nelze uložit, nebyly nalezeny žádné validní instrukce",
+    "btnLoadInstructions": "Načíst/upravit instrukce",
+    "instructionsModalHeader": "Načíst/upravit instrukce",
+    "btnSave": "Uložit",
+    "btnCancel": "Zrušit",
+
+    "instructionsTableInstruction": "Instrukce",
+    "instructionsTableLevel": "Level",
+    "instructionsTablePar": "Par",
+    "instructionsTableExplanation": "Vysvětlení",
+
+    "stackSP": "SP",
+    "stackBase": "Báze",
+    "stackSPSeparator": "Ukazatel stack pointeru",
+
+    "stackSB": "Statická báze volajícího",
+    "stackDB": "Dynamická báze volajícího",
+    "stackPC": "Program counter volajícího",
+
+    "help": "Nápověda", 
+    "ok": "Ok",
+    
+    "createdBy": "Vytvořili Lukáš Vlček a Vojtěch Bartička, integraci na překladač vytvořili Tomáš Linhart a Pavel Třeštík",
+    "workInfo": "Semestrální práce z KIV/FJP, FAV ZČU 2021/2022, FAV ZČU 2022/2023"
+}

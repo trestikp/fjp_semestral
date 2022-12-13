@@ -1,0 +1,59 @@
+.layoutwrapper {
+    display: grid;
+
+    grid:
+        [header-start] 'header header header header' 60px [header-end]
+        [main-start] 'instructions stack heap io' 4fr [main-end]
+        [warningline-start] 'instructions stack warnings warnings' 1fr [warningline-end]
+        [footer-start] 'footer footer footer footer' 30px [footer-end]
+        / minmax(300px, 3fr) 1fr 2fr 1fr;
+
+    place-items: stretch;
+    place-content: stretch;
+
+    width: 100vw;
+    height: 100vh;
+
+    gap: 3px;
+}
+
+.header {
+    grid-area: header;
+    background-color: rgb(206, 206, 206);
+    background-color: #313d5a;
+
+    align-items: center;
+    justify-content: center;
+    display: flex;
+}
+.footer {
+    grid-area: footer;
+    overflow-y: hidden;
+}
+.instructions {
+    grid-area: instructions;
+    overflow-y: auto;
+}
+.warnings {
+    grid-area: warnings;
+    overflow-y: auto;
+}
+.stack {
+    grid-area: stack;
+    overflow-y: auto;
+}
+.heap {
+    grid-area: heap;
+    overflow-y: auto;
+}
+.io {
+    grid-area: io;
+    overflow-y: auto;
+}
+.helpPanel {
+    position: absolute;
+    right: 0;
+    bottom: 10px;
+    width: 700px;
+    display: none;
+}

@@ -7,6 +7,7 @@ function createResizeTerminal() {
     let resize = document.querySelector("#resizeTerminal");
     let down = document.querySelector(".terminal");
     let editor = document.querySelectorAll(".editor");
+    let middleEditor = document.querySelector(".middle-editor");
 
     var dragY = false;
     resize.addEventListener("mouseup", function (e) {
@@ -20,10 +21,11 @@ function createResizeTerminal() {
     editor.forEach(function(el) {
         el.addEventListener("mousemove", function (e) {
             let moveY = e.y;
-            if (dragY)
-                down.style.height =
-                document.getElementsByTagName("html")[0].getBoundingClientRect().height - moveY - resize.getBoundingClientRect().height / 2 + "px";
-            });
+            if (dragY) {
+                down.style.height = document.getElementsByTagName("html")[0].getBoundingClientRect().height - moveY - resize.getBoundingClientRect().height / 2 + "px";
+                middleEditor.style.maxHeight = moveY - document.getElementsByTagName("nav")[0].getBoundingClientRect().height - resize.getBoundingClientRect().height / 2 + "px";
+            }
+        });
     })
 
     editor.forEach(function(el) {

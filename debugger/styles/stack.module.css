@@ -1,0 +1,49 @@
+.stackFrame {
+    margin-top: 10px;
+    font-family: 'Courier Prime', monospace;
+    box-shadow: 2px 2px 5px 2px rgba(0, 0, 0, 0.15);
+}
+.stackFrameOut {
+    font-family: 'Courier Prime', monospace;
+}
+
+.stackSplitter {
+    background-color: red;
+    height: 3px;
+    margin-left: -8px;
+    margin-right: -8px;
+    box-shadow: 1px 1px 3px 1px rgba(0, 0, 0, 0.1);
+}
+
+.stackFrameItem {
+    width: 100%;
+    min-width: 100%;
+    display: flex;
+    flex-direction: rowß;
+}
+.stackItem {
+    padding: 3px;
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+    padding-right: 10px;
+    padding-left: 10px;
+}
+
+.stackRowIndex {
+    min-width: 20%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-end;
+    padding-right: 10px;
+}
+.stackRowIndexSF {
+    color: white;
+}
+.stackRowIndexOutSF {
+}
+
+.stackValue {
+    min-width: 80%;
+}

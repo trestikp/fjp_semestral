@@ -1,0 +1,26 @@
+.heapCell {
+    min-width: 30px;
+    width: calc(20% - 6px);
+    margin: 3px;
+    padding: 5px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    box-shadow: 1px 1px 3px 1px rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+    color: white;
+    height: 35px;
+}
+
+.heapCellEmpty {
+    background-color: #4d8b31;
+}
+.heapCellFull {
+    background-color: #6b0504;
+}
+
+.heapCellEmptyMeta {
+    background-color: #4d8b31aa;
+}
+.heapCellFullMeta {
+    background-color: #6b0504aa;
+}

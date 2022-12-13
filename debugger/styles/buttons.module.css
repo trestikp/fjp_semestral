@@ -1,0 +1,33 @@
+.buttonBase {
+    padding: 7px 13px;
+    margin: 0px 5px;
+    border-radius: 5px !important;
+}
+
+.buttonStandard {
+    outline: none;
+    background-color: #489fb5 !important;
+    border-color: #489fb5 !important;
+}
+/*
+.buttonStandard :hover {
+    background-color: #244f5a !important;
+    border-color: #244f5a !important;
+}*/
+.buttonDanger {
+    background-color: #6b0504 !important;
+    border-color: #6b0504 !important;
+}
+.buttonSecondary {
+    background-color: #9e90a2 !important;
+    border-color: #9e90a2 !important;
+}
+
+/*
+export const primary = '#313D5A';
+export const secondary = '#489FB5';
+export const danger = '#6B0504';
+export const light = '#F8F8F8';
+export const dark = '#9E90A2';
+export const white = '#FFFFFF';
+*/

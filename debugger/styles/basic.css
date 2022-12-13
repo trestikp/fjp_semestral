@@ -1,0 +1,32 @@
+.panel {
+    background-color: #f8f8f8;
+    height: 100%;
+    padding: 10px;
+    box-shadow: 2px 2px 5px 2px rgba(0, 0, 0, 0.15);
+    border-radius: 5px;
+    overflow: auto;
+}
+
+.panelHeader {
+    border-radius: 5px 5px 0px 0px;
+    color: white;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 5px;
+    font-weight: normal;
+    margin: -10px;
+    margin-bottom: 10px;
+}
+
+.panelNH {
+    background-color: #f8f8f8;
+    padding: 10px;
+    box-shadow: 2px 2px 5px 2px rgba(0, 0, 0, 0.15);
+    border-radius: 5px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}

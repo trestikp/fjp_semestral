@@ -85,6 +85,10 @@ nav.bg-light, .resize.bg-light {
     overflow: auto;
 }
 
+#editor-out {
+    font-family:Consolas,Monaco,Lucida Console,Liberation Mono,DejaVu Sans Mono,Bitstream Vera Sans Mono,Courier New, monospace;
+}
+
 .debugger {
     position: absolute;
     top: 99.99vh;
@@ -97,3 +101,4 @@ nav.bg-light, .resize.bg-light {
 .middle-editor.console-hidden {
     max-height: 100vh !important;
 }
+

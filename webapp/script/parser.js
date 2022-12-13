@@ -286,7 +286,12 @@ function debug() {
 }
 
 function download() {
-
+    let textArea = document.getElementById("editor-out");
+    let helperAelement = document.createElement('a');
+    
+    helperAelement.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(textArea.value));
+    helperAelement.setAttribute('download', "outputCode.txt");
+    helperAelement.click();
 }
 
 function copyToClipboard() {

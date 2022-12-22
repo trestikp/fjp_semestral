@@ -190,6 +190,7 @@ function parse() {
 
     if (lastErrors.length == 0) {
         Parser.writeToTerm("Program compiled successfully.", "green");
+        print_instruction_list();
     } else {
         prepareErrors();
     }

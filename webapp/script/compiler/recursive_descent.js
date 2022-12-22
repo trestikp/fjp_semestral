@@ -48,6 +48,27 @@ const Symbols = {
     EOF: "EOF",
 }
 
+const Instructions = {
+    LIT:    "LIT",
+    INT:    "INT",
+    OPR:    "OPR",
+    JMP:    "JMP",
+    JMC:    "JMC",
+    LOD:    "LOD",
+    STO:    "STO",
+    CAL:    "CAL",
+    RET:    "RET",
+    REA:    "REA",
+    NEW:    "NEW",
+    DEL:    "DEL",
+    LDA:    "LDA",
+    STA:    "STA",
+    PLD:    "PLD",
+    PST:    "PST",
+    // to signalize invalid instruction
+    ERR:    "ERR",
+}
+
 const DataTypes = {
     string: "string",
     int: "int",
@@ -55,13 +76,53 @@ const DataTypes = {
     bool: "bool",
 }
 
+
+// TODO: this would be nice to have it private - only accessible through functions
+let instruction_list = [];
+
+function push_instruction(inst = Instructions.ERR, par1 = -1, par2 = -1) {
+    if (inst === Instructions.ERR || par1 === -1 || par2 === -1) {
+        console.log("ERROR - tried to push instructions without specifing all parameters");
+        return;
+    }
+
+    instruction_list.push({inst, par1, par2});
+};
+
+// TODO: rename? - make print to code output html element
+function print_instruction_list() {
+    let textArea = document.getElementById("editor-out");
+    textArea.value = ""; // clear the text area
+    let line;
+
+    for (i = 0; i < instruction_list.length; i++) {
+        line = i + " " + instruction_list[i].inst + "\t" + 
+                         instruction_list[i].par1 + "\t" + 
+                         instruction_list[i].par2 + "\n";
+        textArea.value += line;
+
+        // console.log(i + " " + instruction_list[i].inst + "\t" + 
+        //                       instruction_list[i].par1 + "\t" + 
+        //                       instruction_list[i].par2)
+    }
+}
+
 let recursive_descent = (function() {
+    function variable(name, type, level = 0, position = 0) {
+        return {name, type, level, position};
+    }
+
     let descent = ({
         symbol: null,
         last_symbol_value: null,
         symbol_value: null,
         symbol_counter: 0, // increases when lexer parses symbol - can be used to underline syntax errors (should correspond to error word)
         compilationErrors: [],
+
+        constants: [],
+        variables: [],
+
+        level_counter: 0,
     
         /**
          * Loads next symbol from lexer (tokenizer) into symbol variable. 
@@ -360,9 +421,9 @@ let recursive_descent = (function() {
             return this.compilationErrors;
         },
     
-        /******
-         * private functions - used in non-terminal function calls
-         *****/
+        /**************************************************************************************************************
+         * private functions - used in non-terminal function calls                                                    *
+         **************************************************************************************************************/
     
         validate_input_as_data_type: function() {
             Object.keys(DataTypes).forEach(key => {
@@ -373,8 +434,12 @@ let recursive_descent = (function() {
             return false;
         },
 
+        /**
+         * 
+         * @returns null on error. Array of [name, data_type] otherwise, where dataType can be null, if it wasn't supplied.
+         */
         block_ident_declaration: function() {
-            let ident_name;
+            let ident_name, data_type = null;
 
             // ident
             if (!this.accept(Symbols.ident)) {
@@ -386,24 +451,62 @@ let recursive_descent = (function() {
 
             // [: data_type]
             if (this.accept(Symbols.colon))
-                // NOTE: accept(input) will always return true, because input isn't validated
-                if (!this.accept(Symbols.input) && !this.validate_input_as_data_type(this.last_symbol_value)) {
+                // NOTE: accept(input) will always match, because input isnt validated - everything is input
+                if (!this.accept(Symbols.input) || !this.validate_input_as_data_type(this.last_symbol_value)) {
                     this.error("Following input isn't a valid data type: " + this.last_symbol_value);
                     return null;
-                }
+                } else
+                    data_type = this.last_symbol_value;
 
-            // TODO: maybe generate instructions here - for declaring variables?
+            return [ident_name, data_type];
+        },
 
-            return ident_name;
+        /**
+         * Validates if value is valid data type and determines it. Also validates against expected data type.
+         * @param {*} value that is validated or resolved.
+         * @param {*} expected_dtype can be null. Expected data type of the value
+         * @returns DataTypes value on success. "false" otherwise.
+         */
+        validate_value_and_type: function(value, expected_dtype) {
+            switch (typeof value) {
+                case "number":
+                    {
+                        if (!isNaN(value)) return false;
+                        // value type doesn't match expected data type
+                        if (expected_dtype != null && 
+                            (expected_dtype[1] != DataTypes["int"] || expected_dtype[1] != DataTypes["float"]))
+                        {
+                            this.error("Data type mismatch. Recieved number (int/ float), but declaration expects: " + expected_dtype);
+                            return false;
+                        }
+                        
+                        return Number.isInteger(value) ? DataTypes["int"] : DataTypes["float"];
+                    }
+                case "string":
+                    {
+                        // typeof validates that the value is string
+                        if (expected_dtype != null && expected_dtype != DataTypes["string"]) return false;
+                        return DataTypes["string"];
+                    }
+                case "boolean":
+                    {
+                        // typeof validates that the value is true/ false
+                        if (expected_dtype != null && expected_dtype != DataTypes["bool"]) return false;
+                        return DataTypes["bool"];
+                    }
+                default:
+                    this.error("Unrecognized data type. Supported data types are: integer, float, string");
+            }
+
+            return false;
         },
     
         block_const: function() {
-            let const_name;
+            // this will be array of [name, data_type], where data_type can be null
+            let name_and_type = this.block_ident_declaration();
 
-            const_name = this.block_ident_declaration();
-
-            // error is handled by block_ident_declaration
-            if (const_name == null)
+            // stop parsing if error occured - printing error is handled by block_ident_declaration
+            if (name_and_type[0] == null)
                 return false;
 
             // =
@@ -412,13 +515,24 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // value
-            if (!this.accept(Symbols.input)) {
+            // value - can be either input (string, maybe something more?) or number (both int and float)
+            if (!(this.accept(Symbols.input) || this.accept(Symbols.number))) {
                 this.error("Following value is invalid: " + this.last_symbol_value);
                 return false;
             }
 
-            // TODO: generate instructions either here from where this is called
+            let type = this.validate_value_and_type(this.last_symbol_value, name_and_type[1]);
+            if (type === false) {
+                // error should already be printed by validate_value_and_type
+                return false;
+            }
+
+            // at this point everything should be validated - adding constant
+            // TODO - level and position 
+            this.constants.push(variable(name_and_type[0], type));
+
+            // finally generate appropriate instructions
+            
 
             return true;
         },
@@ -479,24 +593,47 @@ let recursive_descent = (function() {
 
 
         statement_ident: function() {
+            // simple version: ident := expression; // where ; is checked by caller
+            // multiple assignments: ident := ident := ident := expression; // problem: ident can expression - how to determine when it ends?
+            // TODO: will have to add additional rule to the grammar
+
             // first "ident" already verified by caller
             this.accept(Symbols.ident);
 
-            // := ident (indefinetly)
-            do {
-                if (!this.accept(Symbols.assignment)) {
-                    this.error("Statement expected assignment symbol. Statement: " + this.symbol_value);
-                    return false;
-                }
+            // simple version
+            if (!this.accept(Symbols.assignment)) {
+                this.error("Statement expected assignment symbol. Statement: " + this.symbol_value);
+                return false;
+            }
 
-                // TODO should save idents to some list
-            } while (this.accept(Symbols.ident));
-
-            // expression
             if (!this.expression()) {
                 this.error("Assignment must end with a valid expression.");
                 return false;
             }
+
+            // := ident (indefinetly)
+            // do {
+            //     if (!this.accept(Symbols.assignment)) {
+            //         this.error("Statement expected assignment symbol. Statement: " + this.symbol_value);
+            //         return false;
+            //     }
+
+            //     if (!this.expression()) {
+            //         this.error("Assignment must end with a valid expression.");
+            //         return false;
+            //     }
+
+            //     // TODO should save idents to some list
+            // } while (this.accept(Symbols.ident));
+
+            // expression
+            // if (!this.expression()) {
+            //     this.error("Assignment must end with a valid expression.");
+            //     return false;
+            // }
+
+            // // reached end of statement
+            // if (!this.accept(Symbols.semicolon)) return false;
 
             // TODO: instructions assigning expression result to all identifiers
 

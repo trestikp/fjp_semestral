@@ -1,10 +1,19 @@
 id                      [a-zA-Z][a-zA-Z0-9]*
-//number                  [0-9][0-9]* // TODO: this is wrong
-//number                  ([0-9].){,1}[0-9]
-number                  \d+(?:\.\d+)? // https://stackoverflow.com/questions/14550526/regex-for-both-integer-and-float
+integer                 [-+]?[0-9]+ // allows leading zeros - this is by design
+float                   [+-]?([0-9]+[.]([0-9]*)?|[.][0-9]+) // https://stackoverflow.com/questions/9043551/regex-that-matches-integers-in-between-whitespace-or-start-end-of-string-only
+bool                    ("true"|"false")
+string                  \"(.*?)\"
 
 %%
 \s+                     { /* skip whitespaces */ }
+"+"                     return Symbols.plus;
+"-"                     return Symbols.minus;
+"*"                     return Symbols.star;
+"/"                     return Symbols.slash;
+{bool}                  { symbol_input_type = Symbols_Input_Type.boolean; return Symbols.input; }
+{float}                 { symbol_input_type = Symbols_Input_Type.float; return Symbols.input; }
+{integer}               { symbol_input_type = Symbols_Input_Type.integer; return Symbols.input; }
+{string}                { symbol_input_type = Symbols_Input_Type.string; return Symbols.input; }
 "begin"                 return Symbols.begin;
 "call"                  return Symbols.call;
 "const"                 return Symbols.const;
@@ -22,6 +31,8 @@ number                  \d+(?:\.\d+)? // https://stackoverflow.com/questions/145
 "to"                    return Symbols.to;
 "var"                   return Symbols.var;
 "while"                 return Symbols.while;
+"(*"                    return Symbols.comment_start;
+"*)"                    return Symbols.comment_end;
 ":="                    return Symbols.assignment;
 ":"                     return Symbols.colon;
 ";"                     return Symbols.semicolon;
@@ -39,10 +50,5 @@ number                  \d+(?:\.\d+)? // https://stackoverflow.com/questions/145
 "<"                     return Symbols.lt;
 ">="                    return Symbols.gte;
 ">"                     return Symbols.gt;
-"+"                     return Symbols.plus;
-"-"                     return Symbols.minus;
-"*"                     return Symbols.star;
-"/"                     return Symbols.slash;
 {id}                    return Symbols.ident;
-{number}                return Symbols.number;
-.                       return Symbols.input;
+.                       return Symbols.ERR;

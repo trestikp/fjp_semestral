@@ -39,13 +39,23 @@ const Symbols = {
     minus:          "-",
     star:           "*", 
     slash:          "/",
+    comment_start:   "(*",
+    comment_end:    "*)",
     // dynamic inputs (dependant on input) - must read input
-    number:         "[0-9]",
     ident:          "id",
     input:          "input",
     // error symbols
-    ERR: "ERR",
-    EOF: "EOF",
+    ERR:            "ERR",
+    EOF:            "EOF",
+}
+
+let symbol_input_type; // TODO: move it to better place?
+const Symbols_Input_Type = {
+    boolean:    "boolean",
+    integer:    "integer",
+    float:      "float",
+    string:     "string",
+    ERR:        "ERR",
 }
 
 const Instructions = {
@@ -130,12 +140,22 @@ let recursive_descent = (function() {
          */
         next_sym: function() {
             this.last_symbol_value = tokenizer.yytext;
+            let reading_comment = false;
     
             try {
                 do {
-                    this.symbol = tokenizer.next();
-                } while (this.symbol === false); // next returns "false" on whitespace
-                
+                    do {
+                        this.symbol = tokenizer.next();
+                    } while (this.symbol === false); // next returns "false" on whitespace
+
+                    if (this.symbol === Symbols.comment_start)
+                        reading_comment = true;
+                    if (this.symbol === Symbols.comment_end)
+                        reading_comment = false;
+                    if (this.symbol === tokenizer.EOF)
+                        break; // reached EOF - this is in case EOF is reached in comment
+                } while (reading_comment);
+
                 this.symbol_value = tokenizer.yytext; // TODO: may be unneeded?
                 this.symbol_counter++;
             } catch(error) {
@@ -151,6 +171,7 @@ let recursive_descent = (function() {
         accept: function(sym) {
             if (this.symbol === sym) {
                 this.next_sym();
+                console.log("Accepted symbol: " + this.symbol + ", text: " + tokenizer.yytext); // TODO: remove - debugg
                 return true;
             }
     
@@ -354,6 +375,11 @@ let recursive_descent = (function() {
                         return false;
                     }
                     break;
+                case Symbols.end:
+                    if (!this.statement_end()) {
+                        return false;
+                    }
+                    return 10; // special case - returns on true - doesn't return boolean
                 default:
                     this.error("Unrecognized statement: " + this.symbol_value);
                     return false;
@@ -739,22 +765,25 @@ let recursive_descent = (function() {
         statement_begin: function() {
             // begin verified by caller
             this.accept(Symbols.begin);
+            
+            let rv;
 
             // statement {";" statement}
             do {
-                if (!this.statement()) {
-                    if (this.last_symbol_value == Symbols.semicolon && this.symbol_value == Symbols.end) break; // TODO: this is ugly quick fix for testing
-
+                rv = this.statement();
+                if (rv === 10)
+                    break;
+                if (rv === false) {
                     this.error("Failed to process statement in command block.");
                     return false;
                 }
             } while (this.accept(Symbols.semicolon));
 
-            // end
-            if (!this.accept(Symbols.end)) {
-                this.error("Expected 'end' to close command block. Received: " + this.symbol_value);
-                return false;
-            }
+            // end -- accepted by statement_end();
+            // if (!this.accept(Symbols.end)) {
+            //     this.error("Expected 'end' to close command block. Received: " + this.symbol_value);
+            //     return false;
+            // }
 
             return true;
         },
@@ -940,6 +969,10 @@ let recursive_descent = (function() {
 
             return true;
         },
+
+        statement_end: function() {
+            return this.accept(Symbols.end);
+        }
     });
     return descent;
 }) ();

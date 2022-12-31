@@ -44,6 +44,7 @@ const Symbols = {
     // dynamic inputs (dependant on input) - must read input
     ident:          "id",
     input:          "input",
+    data_type:      "data_type",
     // error symbols
     ERR:            "ERR",
     EOF:            "EOF",
@@ -118,8 +119,8 @@ function print_instruction_list() {
 }
 
 let recursive_descent = (function() {
-    function variable(name, type, level = 0, position = 0) {
-        return {name, type, level, position};
+    function make_var(name, type, value = null, constant = false, level = 0, position = 0) {
+        return {name, type, value, constant, level, position};
     }
 
     let descent = ({
@@ -129,8 +130,11 @@ let recursive_descent = (function() {
         symbol_counter: 0, // increases when lexer parses symbol - can be used to underline syntax errors (should correspond to error word)
         compilationErrors: [],
 
-        constants: [],
+        // constants: [],
+        // variables: [],
+        // array of arrays for constants and variables in a scope - every inner array is one scope of a level (index should correspons to level)
         variables: [],
+        context_list: new Object(),
 
         level_counter: 0,
     
@@ -392,14 +396,20 @@ let recursive_descent = (function() {
         },
     
         block: function() {
+            // let consts = [], vars = [];
+            let vars = []; // constants and variables of current scope
+            let var_obj;
+
             // const
             if (this.accept(Symbols.const)) {
                 do {
-                    if (!this.block_const()) 
-                        return false; // failed parsing 
+                    if ((var_obj = this.block_const()) === false) 
+                        return false; // failed parsing
+                        
+                    // consts.push(var_obj);
+                    vars.push(var_obj);
                 } while (this.accept(Symbols.comma));
                 
-                // TODO: while might have ended by unknown token - not semicolon - error check
                 // ;
                 if (!this.accept(Symbols.semicolon)) {
                     // TODO: see if tokenizer can provide line number for this error (it should)
@@ -411,8 +421,10 @@ let recursive_descent = (function() {
             // var
             if (this.accept(Symbols.var)) {
                 do {
-                    if (this.block_ident_declaration() == null) 
+                    if ((var_obj = this.load_ident_and_type()) === false) 
                         return false; // failed parsing 
+
+                    vars.push(var_obj);
                 } while (this.accept(Symbols.comma));
                 
                 // ;
@@ -423,16 +435,37 @@ let recursive_descent = (function() {
                 }
             }
 
+            let proc_name = "";
             while (this.accept(Symbols.procedure)) {
-                if (this.block_procedure() == null)
+                if ((proc_name = this.block_procedure()) == null)
                     return false; // failed to compile procedure
             }
 
+
+            if (this.context_list[proc_name] != null || this.context_list[proc_name] !== undefined) {
+                this.error("Compilation failed because context with " + proc_name + " already exists. Please ensure " + 
+                    proc_name + " is unique.");
+                return false;
+            }
+
+            console.log("context: " + proc_name);
+
+            // let var_index = this.variables.length; // maybe for verification that we are later popping correct stack
+            if (vars.length > 0)
+                this.variables.push(vars);
+
+            if (this.variables.length > 0)
+                push_instruction(Instructions.CAL, 0, 0); // TODO: params?
+
+
+
+            // TODO: set PC
             if (!this.statement()) {
                 // print some error? - statement compiling will print errors on where it failed
                 return false;
             }
 
+            this.variables.pop(); // at the top of the array should be only this blocks stack - maybe verify with index?
             return true;
         },
     
@@ -460,6 +493,15 @@ let recursive_descent = (function() {
             return false;
         },
 
+        validate_data_type: function(input) {
+            Object.keys(DataTypes).forEach(key => {
+                if (DataTypes[key] == input)
+                    return true;
+            });
+
+            return false;
+        },
+
         /**
          * 
          * @returns null on error. Array of [name, data_type] otherwise, where dataType can be null, if it wasn't supplied.
@@ -475,14 +517,15 @@ let recursive_descent = (function() {
 
             ident_name = this.last_symbol_value; // name is valid identifier
 
+            // TODO: test if this works, this will most likely not work correctly
             // [: data_type]
             if (this.accept(Symbols.colon))
-                // NOTE: accept(input) will always match, because input isnt validated - everything is input
-                if (!this.accept(Symbols.input) || !this.validate_input_as_data_type(this.last_symbol_value)) {
-                    this.error("Following input isn't a valid data type: " + this.last_symbol_value);
+                // lexer validates type
+                if (!this.accept(Symbols.data_type)) {
+                    this.error("Expected data type but got invalid input (unrecognized data type): " + this.last_symbol_value);
                     return null;
                 } else
-                    data_type = this.last_symbol_value;
+                    data_type = this.last_symbol_value; // TODO: could do DataTypes[last_symbol] here
 
             return [ident_name, data_type];
         },
@@ -526,14 +569,37 @@ let recursive_descent = (function() {
 
             return false;
         },
-    
-        block_const: function() {
+
+        load_ident_and_type: function() {
             // this will be array of [name, data_type], where data_type can be null
             let name_and_type = this.block_ident_declaration();
+
+            if (name_and_type == null)
+                return false;
 
             // stop parsing if error occured - printing error is handled by block_ident_declaration
             if (name_and_type[0] == null)
                 return false;
+
+            if (name_and_type[1] != null)
+                if (!this.validate_data_type(name_and_type[1])) {
+                    this.error("Invalid data type while parsing constants or variables. Datatype: " + name_and_type[1]);
+                    return false;
+                }
+
+            // at this point everything should be validated - returning variable object
+            // TODO - level and position - variable(name, type, level, position); -- might be unnecessary
+            return make_var(name_and_type[0], name_and_type[1]);
+        },
+    
+        block_const: function() {
+            // this will be array of [name, data_type], where data_type can be null
+            let var_obj = this.load_ident_and_type();
+
+            if (var_obj === false) {
+                // error printing should be done in load_ident_and_type
+                return false;
+            }
 
             // =
             if (!this.accept(Symbols.eq)) {
@@ -541,26 +607,50 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // value - can be either input (string, maybe something more?) or number (both int and float)
-            if (!(this.accept(Symbols.input) || this.accept(Symbols.number))) {
-                this.error("Following value is invalid: " + this.last_symbol_value);
+            if (!this.accept(Symbols.input)) {
+                this.error("Expected value input, but recieved unrecognized token. Invalid input: " + this.last_symbol_value);
                 return false;
             }
 
-            let type = this.validate_value_and_type(this.last_symbol_value, name_and_type[1]);
-            if (type === false) {
-                // error should already be printed by validate_value_and_type
+            if (this.validate_value_and_type(this.last_symbol_value, var_obj.type) === false) {
+                this.error("Failed to validate value.");
                 return false;
             }
 
-            // at this point everything should be validated - adding constant
-            // TODO - level and position 
-            this.constants.push(variable(name_and_type[0], type));
+            var_obj.value = this.last_symbol_value; // TODO: parse last_symbol_value as value of type?
+            var_obj.constant = true;
 
-            // finally generate appropriate instructions
-            
+            return var_obj;
 
-            return true;
+            // // this will be array of [name, data_type], where data_type can be null
+            // let name_and_type = this.block_ident_declaration();
+
+            // // stop parsing if error occured - printing error is handled by block_ident_declaration
+            // if (name_and_type[0] == null)
+            //     return false;
+
+            // // =
+            // if (!this.accept(Symbols.eq)) {
+            //     this.error("Expected '=' symbol but received: " + this.last_symbol_value);
+            //     return false;
+            // }
+
+            // // TODO: this works differently now
+            // // value - can be either input (string, maybe something more?) or number (both int and float)
+            // if (!(this.accept(Symbols.input) || this.accept(Symbols.number))) {
+            //     this.error("Following value is invalid: " + this.last_symbol_value);
+            //     return false;
+            // }
+
+            // let type = this.validate_value_and_type(this.last_symbol_value, name_and_type[1]);
+            // if (type === false) {
+            //     // error should already be printed by validate_value_and_type
+            //     return false;
+            // }
+
+            // // at this point everything should be validated - returning constant
+            // // TODO - level and position 
+            // return variable(name_and_type[0], type);
         },
 
         block_procedure: function() {

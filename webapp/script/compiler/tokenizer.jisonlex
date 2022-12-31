@@ -1,19 +1,25 @@
 id                      [a-zA-Z][a-zA-Z0-9]*
-integer                 [-+]?[0-9]+ // allows leading zeros - this is by design
-float                   [+-]?([0-9]+[.]([0-9]*)?|[.][0-9]+) // https://stackoverflow.com/questions/9043551/regex-that-matches-integers-in-between-whitespace-or-start-end-of-string-only
+// removed options of +25, +1.01 etc., because f it
+//integer                 [+-]?[0-9]+ // allows leading zeros - this is by design
+//float                   [+-]?([0-9]+[.]([0-9]*)?|[.][0-9]+) // https://stackoverflow.com/questions/9043551/regex-that-matches-integers-in-between-whitespace-or-start-end-of-string-only
+// not allowing sings, because signs are grammar symbols
+integer                 [0-9]+ // allows leading zeros - this is by design
+float                   ([0-9]+[.]([0-9]*)?|[.][0-9]+) // https://stackoverflow.com/questions/9043551/regex-that-matches-integers-in-between-whitespace-or-start-end-of-string-only
 bool                    ("true"|"false")
 string                  \"(.*?)\"
 
 %%
 \s+                     { /* skip whitespaces */ }
-"+"                     return Symbols.plus;
-"-"                     return Symbols.minus;
+"(*"                    return Symbols.comment_start;
+"*)"                    return Symbols.comment_end;
 "*"                     return Symbols.star;
 "/"                     return Symbols.slash;
-{bool}                  { symbol_input_type = Symbols_Input_Type.boolean; return Symbols.input; }
-{float}                 { symbol_input_type = Symbols_Input_Type.float; return Symbols.input; }
-{integer}               { symbol_input_type = Symbols_Input_Type.integer; return Symbols.input; }
-{string}                { symbol_input_type = Symbols_Input_Type.string; return Symbols.input; }
+"+"                     return Symbols.plus;
+"-"                     return Symbols.minus;
+{bool}                  { symbol_input_type = Symbols_Input_Type.boolean;   return Symbols.input; }
+{float}                 { symbol_input_type = Symbols_Input_Type.float;     return Symbols.input; }
+{integer}               { symbol_input_type = Symbols_Input_Type.integer;   return Symbols.input; }
+{string}                { symbol_input_type = Symbols_Input_Type.string;    return Symbols.input; }
 "begin"                 return Symbols.begin;
 "call"                  return Symbols.call;
 "const"                 return Symbols.const;
@@ -31,8 +37,10 @@ string                  \"(.*?)\"
 "to"                    return Symbols.to;
 "var"                   return Symbols.var;
 "while"                 return Symbols.while;
-"(*"                    return Symbols.comment_start;
-"*)"                    return Symbols.comment_end;
+"bool"                  return Symbols.data_type;
+"integer"               return Symbols.data_type;
+"float"                 return Symbols.data_type;
+"string"                return Symbols.data_type;
 ":="                    return Symbols.assignment;
 ":"                     return Symbols.colon;
 ";"                     return Symbols.semicolon;

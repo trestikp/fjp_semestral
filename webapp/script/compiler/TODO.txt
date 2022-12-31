@@ -1,0 +1,10 @@
+- celkove instrukce
+- problem je jak udelat scope.... neresitelny?
+    - pri volani procedury (CAL) se vytvori novy stack frame, ktery adresuje relativne k sobe 
+        - tedy k pristupu k pormenny o x urovni vic, se musi vedet, ze uroven zanoreni je x - tuto je ale nemozne bez sofistikovaneho analyzatoru
+- jak udelat return? - RET konci proceduru, a invaliduje momentalni stack frame 
+    - NAPAD: musi se vedet, kam se return hodnota bude ukladat a ulozit return hodnotu do urovne vys
+        - to by mohlo fungovat
+- operace pro integer, float, boolean a aspon nejaky pro string
+- stringy jako heap
+    - string + string jednoduse alokuje novy string delky souctu obou stringy a prekopiruje je

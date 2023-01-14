@@ -100,6 +100,15 @@ function push_instruction(inst = Instructions.ERR, par1 = -1, par2 = -1) {
     instruction_list.push({inst, par1, par2});
 };
 
+function push_instruction_to_start(inst = Instructions.ERR, par1 = -1, par2 = -1) {
+    if (inst === Instructions.ERR || par1 === -1 || par2 === -1) {
+        console.log("ERROR - tried to push instructions without specifing all parameters");
+        return;
+    }
+
+    instruction_list.unshift({inst, par1, par2});
+};
+
 // TODO: rename? - make print to code output html element
 function print_instruction_list() {
     let textArea = document.getElementById("editor-out");
@@ -134,7 +143,8 @@ let recursive_descent = (function() {
         // variables: [],
         // array of arrays for constants and variables in a scope - every inner array is one scope of a level (index should correspons to level)
         variables: [],
-        context_list: new Object(),
+        // context_list: new Object(), // wanted it as a map, but array will have to do
+        context_list: [],
 
         level_counter: 0,
     
@@ -175,7 +185,7 @@ let recursive_descent = (function() {
         accept: function(sym) {
             if (this.symbol === sym) {
                 this.next_sym();
-                console.log("Accepted symbol: " + this.symbol + ", text: " + tokenizer.yytext); // TODO: remove - debugg
+                // console.log("Accepted symbol: " + this.symbol + ", text: " + tokenizer.yytext); // TODO: remove - debugg
                 return true;
             }
     
@@ -412,7 +422,6 @@ let recursive_descent = (function() {
                 
                 // ;
                 if (!this.accept(Symbols.semicolon)) {
-                    // TODO: see if tokenizer can provide line number for this error (it should)
                     this.error("Missing semicolon at the end of const section.");
                     return false;
                 }
@@ -435,29 +444,39 @@ let recursive_descent = (function() {
                 }
             }
 
-            let proc_name = "";
+            // must push vars before procedures, so we can use them in procs
+            // let var_index = this.variables.length; // maybe for verification that we are later popping correct stack
+            if (vars.length > 0)
+            this.variables.push(vars);
+
+            let pp_count = 0; // procedure-param count
+            // procedures
             while (this.accept(Symbols.procedure)) {
-                if ((proc_name = this.block_procedure()) == null)
+                pp_count = this.block_procedure();
+                
+                if (pp_count < 0)
                     return false; // failed to compile procedure
             }
 
+            // this value is returned - this is an address where this block instructions start
+            let block_start = instruction_list.length;
 
-            if (this.context_list[proc_name] != null || this.context_list[proc_name] !== undefined) {
-                this.error("Compilation failed because context with " + proc_name + " already exists. Please ensure " + 
-                    proc_name + " is unique.");
-                return false;
-            }
+            // alloc space for variables in current stack frame
+            push_instruction(Instructions.INT, 0, 3 + pp_count + vars.length); // TODO: make 3 constant - always needs alloc for registers
 
-            console.log("context: " + proc_name);
-
-            // let var_index = this.variables.length; // maybe for verification that we are later popping correct stack
-            if (vars.length > 0)
-                this.variables.push(vars);
-
-            if (this.variables.length > 0)
-                push_instruction(Instructions.CAL, 0, 0); // TODO: params?
-
-
+            // initialize constant values
+            vars.forEach(function (val, i) {
+                if (val.constant) {
+                    // TODO: linting suggest val.value is problematic, but i dont know why
+                    if (val.value == undefined || val.value == null) {
+                        this.error("Failed to generate constant initialization instructions. Constant: " + 
+                            val.name + " does not have a value!");
+                        return false;
+                    }
+                    push_instruction(Instructions.LIT, 0, val.value);
+                    push_instruction(Instructions.STO, val.level, val.position);
+                }
+            })
 
             // TODO: set PC
             if (!this.statement()) {
@@ -465,17 +484,36 @@ let recursive_descent = (function() {
                 return false;
             }
 
+            // TODO: is this wanted?
             this.variables.pop(); // at the top of the array should be only this blocks stack - maybe verify with index?
-            return true;
+
+            push_instruction(Instructions.RET, 0, 0); // TODO: ret value?
+
+            return block_start;
         },
     
         program: function() {
             this.compilationErrors = []; //Empty the errors ftom previous iterations
+            this.context_list = [];
+            instruction_list = []; // empty instruction list (global)
+
             this.next_sym();
-            if (!this.block())
+
+            let main_context = this.push_context("main", -1); // TODO main block name constant?
+            let block_start = 0;
+            if ((block_start = this.block()) === false)
                 return this.compilationErrors; // failed to parse the body of the program - dot won't be reached by tokenizer (lexer)
+            main_context.c_address = block_start;
+
             if (!this.accept(Symbols.dot))
                 this.error("The program MUST end with '.' (dot)");
+
+            // must push in reverse to keep correct order when pushing to start
+            for (i = (this.context_list.length - 1); i >= 0; i--) {
+                push_instruction_to_start(Instructions.JMP, 0,
+                    this.context_list[i].c_address + this.context_list.length);
+                console.log("%d pushing %s", i, this.context_list[i].c_name);
+            }
 
             return this.compilationErrors;
         },
@@ -483,6 +521,55 @@ let recursive_descent = (function() {
         /**************************************************************************************************************
          * private functions - used in non-terminal function calls                                                    *
          **************************************************************************************************************/
+
+        push_context: function(c_name, c_address) {
+            console.log("adding context: " + c_name);
+            // TODO: not doing error checking - is that ok? - only used privately anyway
+            this.context_list.push({c_name, c_address});
+            return this.context_list[this.context_list.length - 1];
+        },
+
+        /**
+         * Searches the context_list. If the list contains object with @c_name returns it. Returns null otherwise.
+         */
+        get_context_by_name: function (c_name) {
+            for (i in this.context_list) {
+                if (this.context_list[i].c_name == c_name) {
+                    return this.context_list[i];
+                }
+            }
+
+            return null;
+        },
+
+        get_context_index_by_name: function (c_name) {
+            for (i in this.context_list) {
+                if (this.context_list[i].c_name == c_name) {
+                    return i;
+                }
+            }
+
+            return -1;
+        },
+
+        /**
+         * Returns variable closest to current context scope or null. If the same variable name is contained in 
+         * different context - eg. "a" in global context and "a" in procedure "test", then "a" from "test" 
+         * will be returned.
+         */
+        get_variable_by_name: function (var_name) {
+            // reversing the list from end, because new scopes are at the end of the list
+            for (i = (this.variables.length - 1); i >= 0; i--) {
+                let inner_list = this.variables[i];
+                // reversing inner list, because constants are at the start of the list, which might not be as desired as variables
+                for (j = (inner_list.length - 1); j >= 0; j--) {
+                    if (inner_list[j].name == var_name)
+                        return inner_list[j];
+                }
+            }
+
+            return null;
+        },
     
         validate_input_as_data_type: function() {
             Object.keys(DataTypes).forEach(key => {
@@ -655,14 +742,22 @@ let recursive_descent = (function() {
 
         block_procedure: function() {
             let ident_name;
+            let param_count = 0;
 
             // ident
             if (!this.accept(Symbols.ident)) {
                 this.error("Following identifier is invalid: " + this.last_symbol_value);
-                return null;
+                return -1;
             }
 
             ident_name = this.last_symbol_value; // name is valid identifier
+
+            // check if context name is available
+            if (this.get_context_by_name(ident_name) != null) {
+                this.error("Compilation failed because context with name: " + ident_name + ", already exists." + 
+                        " Please ensure name: " + ident_name + " is unique.");
+                return -1;
+            }
 
             // optionally parameters
             // [ "(" ident [ : data_type ] {"," ident [ : data_type ]} ")" ]
@@ -670,8 +765,9 @@ let recursive_descent = (function() {
                 // 
                 do {
                     if (this.block_ident_declaration() == null) 
-                        return null; // failed parsing 
+                        return -1; // failed parsing 
 
+                    param_count++;
                     // TODO: save param name to some structure
                 } while (this.accept(Symbols.comma));
                 
@@ -679,29 +775,32 @@ let recursive_descent = (function() {
                 if (!this.accept(Symbols.close_bra)) {
                     // TODO: see if tokenizer can provide line number for this error (it should)
                     this.error("Procedure paramater declaration MUST BE closed by ')'");
-                    return null;
+                    return -1;
                 }
             }
 
             // ;
             if (!this.accept(Symbols.semicolon)) {
                 this.error("Procedure (" + ident_name + ") header (declaration) must end with ';'");
-                return null;
+                return -1;
             }
-
+            
             // block
-            if (!this.block()) {
+            let current_context = this.push_context(ident_name, -1);
+            let block_start = 0;
+            if ((block_start = this.block()) === false) {
                 this.error("Failed to compile procedure (" + ident_name + ") body.");
-                return null;
+                return -1;
             }
+            current_context.c_address = block_start;
 
             // ;
             if (!this.accept(Symbols.semicolon)) {
                 this.error("Procedure (" + ident_name + ") body must end with ';'");
-                return null;
+                return -1;
             }
 
-            return ident_name;
+            return param_count;
         },
 
 
@@ -716,6 +815,13 @@ let recursive_descent = (function() {
             // first "ident" already verified by caller
             this.accept(Symbols.ident);
 
+            let variable = this.get_variable_by_name(this.last_symbol_value);
+
+            if (variable == null) {
+                this.error("Assignment statement failed. Identifier: " + this.last_symbol_value + " not found");
+                return false;
+            }
+
             // simple version
             if (!this.accept(Symbols.assignment)) {
                 this.error("Statement expected assignment symbol. Statement: " + this.symbol_value);
@@ -726,6 +832,9 @@ let recursive_descent = (function() {
                 this.error("Assignment must end with a valid expression.");
                 return false;
             }
+
+            // expecting that expression result is at the top of the stack
+            push_instruction(Instructions.STO, variable.level, variable.position);
 
             // := ident (indefinetly)
             // do {
@@ -818,8 +927,14 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // TODO: check that ident is a procedure identifier (stored in last_symbol_value)
-            // TODO: generate instructions
+            let context_index = this.get_context_index_by_name(this.last_symbol_value);
+            if (context_index < 0) {
+                this.error("Call failed because identifier: " + ident + " does not exist.");
+                return false;
+            }
+
+            // except for main - main is always index 0 and is first instruction of the program
+            push_instruction(Instructions.CAL, 0, context_index);
             
             return true;
         },

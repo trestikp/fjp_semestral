@@ -25,6 +25,8 @@ const DEBUGGER_IP = "http://localhost:3000";
 
         //Print welcome message <3
         Parser.writeToTerm("Welcome to PL0 parser :)");
+
+        //TODO: RESET SCROLL VALUE TO THE TOP LEFT CORNER
     });
 
     //=======================================================

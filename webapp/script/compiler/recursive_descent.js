@@ -59,14 +59,6 @@ const Symbols_Input_Type = {
     ERR:        "ERR",
 }
 
-// TODO: DataTypes are completely useless - Symbols_Input_Type is enough - REFACTOR!
-const DataTypes = {
-    string: "string",
-    int: "int",
-    float: "float",
-    bool: "bool",
-}
-
 const Instructions = {
     LIT:    "LIT",
     INT:    "INT",
@@ -329,7 +321,7 @@ let recursive_descent = (function() {
                 // TODO instructions
                 return true;
             } else if (this.accept(Symbols.input)) {
-                // validate input for value (string, bool)
+                // validate input for value (string, boolean)
                 return true;
             } else if (this.accept(Symbols.open_bra)) {
                 if (!this.expression()) {
@@ -593,8 +585,8 @@ let recursive_descent = (function() {
         },
     
         validate_input_as_data_type: function() {
-            Object.keys(DataTypes).forEach(key => {
-                if (DataTypes[key] == this.last_symbol_value)
+            Object.keys(Symbols_Input_Type).forEach(key => {
+                if (Symbols_Input_Type[key] == this.last_symbol_value)
                     return true;
             });
 
@@ -602,8 +594,8 @@ let recursive_descent = (function() {
         },
 
         validate_data_type: function(input) {
-            Object.keys(DataTypes).forEach(key => {
-                if (DataTypes[key] == input)
+            Object.keys(Symbols_Input_Type).forEach(key => {
+                if (Symbols_Input_Type[key] == input)
                     return true;
             });
 
@@ -633,7 +625,7 @@ let recursive_descent = (function() {
                     this.error("Expected data type but got invalid input (unrecognized data type): " + this.last_symbol_value);
                     return null;
                 } else
-                    data_type = this.last_symbol_value; // TODO: could do DataTypes[last_symbol] here
+                    data_type = Symbols_Input_Type[this.last_symbol_value]; 
 
             return [ident_name, data_type];
         },
@@ -642,7 +634,7 @@ let recursive_descent = (function() {
          * Validates if value is valid data type and determines it. Also validates against expected data type.
          * @param {*} value that is validated or resolved.
          * @param {*} expected_dtype can be null. Expected data type of the value
-         * @returns DataTypes value on success. "false" otherwise.
+         * @returns Symbols_Input_Type value on success. "false" otherwise.
          */
         validate_value_and_type: function(value, expected_dtype) {
             switch (typeof value) {
@@ -651,25 +643,25 @@ let recursive_descent = (function() {
                         if (!isNaN(value)) return false;
                         // value type doesn't match expected data type
                         if (expected_dtype != null && 
-                            (expected_dtype[1] != DataTypes["int"] || expected_dtype[1] != DataTypes["float"]))
+                            (expected_dtype[1] != Symbols_Input_Type["integer"] || expected_dtype[1] != Symbols_Input_Type["float"]))
                         {
                             this.error("Data type mismatch. Recieved number (int/ float), but declaration expects: " + expected_dtype);
                             return false;
                         }
                         
-                        return Number.isInteger(value) ? DataTypes["int"] : DataTypes["float"];
+                        return Number.isInteger(value) ? Symbols_Input_Type["integer"] : Symbols_Input_Type["float"];
                     }
                 case "string":
                     {
                         // typeof validates that the value is string
-                        if (expected_dtype != null && expected_dtype != DataTypes["string"]) return false;
-                        return DataTypes["string"];
+                        if (expected_dtype != null && expected_dtype != Symbols_Input_Type["string"]) return false;
+                        return Symbols_Input_Type["string"];
                     }
                 case "boolean":
                     {
                         // typeof validates that the value is true/ false
-                        if (expected_dtype != null && expected_dtype != DataTypes["bool"]) return false;
-                        return DataTypes["bool"];
+                        if (expected_dtype != null && expected_dtype != Symbols_Input_Type["boolean"]) return false;
+                        return Symbols_Input_Type["boolean"];
                     }
                 default:
                     this.error("Unrecognized data type. Supported data types are: integer, float, string");

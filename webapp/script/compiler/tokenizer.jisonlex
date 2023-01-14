@@ -37,7 +37,7 @@ string                  \"(.*?)\"
 "to"                    return Symbols.to;
 "var"                   return Symbols.var;
 "while"                 return Symbols.while;
-"bool"                  return Symbols.data_type;
+"boolean"               return Symbols.data_type;
 "integer"               return Symbols.data_type;
 "float"                 return Symbols.data_type;
 "string"                return Symbols.data_type;

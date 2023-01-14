@@ -59,6 +59,14 @@ const Symbols_Input_Type = {
     ERR:        "ERR",
 }
 
+// TODO: DataTypes are completely useless - Symbols_Input_Type is enough - REFACTOR!
+const DataTypes = {
+    string: "string",
+    int: "int",
+    float: "float",
+    bool: "bool",
+}
+
 const Instructions = {
     LIT:    "LIT",
     INT:    "INT",
@@ -78,13 +86,6 @@ const Instructions = {
     PST:    "PST",
     // to signalize invalid instruction
     ERR:    "ERR",
-}
-
-const DataTypes = {
-    string: "string",
-    int: "int",
-    float: "float",
-    bool: "bool",
 }
 
 
@@ -222,38 +223,49 @@ let recursive_descent = (function() {
                     return false;
                 }
 
-                // TODO: insctructions
+                // assuming expression result is on top of the stack
+                push_instruction(Instructions.OPR, 0, 6); // 6 = is odd
 
                 return true;
             } else if (this.expression()) {
-                // TODO cases
-                switch (this.symbol) {
+                let op_number = 0;
+                switch (this.symbol) { // TODO: cant work in this order, opr must be last
                     case Symbols.eq:
                         this.accept(Symbols.eq);
+                        op_number = 8; // 8 = equal
                         break;
                     case Symbols.hash_mark:
                         this.accept(Symbols.hash_mark);
+                        op_number = 9; // 9 = inequal
                         break;
                     case Symbols.lt:
                         this.accept(Symbols.lt);
+                        op_number = 10; // 10 = less than
                         break;
                     case Symbols.lte:
                         this.accept(Symbols.lte);
+                        op_number = 11; // 11 = less than or equal
                         break;
                     case Symbols.gt:
                         this.accept(Symbols.gt);
+                        op_number = 12; // 12 = greater than
                         break;
                     case Symbols.gte:
                         this.accept(Symbols.gte);
+                        op_number = 13; // 13 = greater than or equal
                         break;
                     default:
                         this.error("Unrecognized comparison operation.");
+                        return false;
                 }
 
                 if (!this.expression()) {
                     this.error("Failed to evaluate second expression.");
                     return false;
                 }
+
+                // assumes that top of stack is 2 results of 2 expressions
+                push_instruction(Instructions.OPR, 0, op_number);
 
                 return true;
             }
@@ -263,8 +275,17 @@ let recursive_descent = (function() {
         },
 
         expression: function() {
+            // expression can be "result" of call
+            if (this.statement_call())
+                return true;
+
+            // if the expression isn't call, then do normal expression
+            let negate = false;
             if (this.accept(Symbols.plus) || this.accept(Symbols.minus)) {
-                // last_symbol - add some instruction or we
+                // nothing to do with +
+                // on - negates the result
+                if (this.last_symbol_value == Symbols.minus)
+                    negate = true;
             }
 
             if (!this.term()) {
@@ -360,32 +381,32 @@ let recursive_descent = (function() {
                     }
                     break;
                 case Symbols.if:
-                    if (!this.statement_if()) {
+                    if (!this.statement_if()) { // TODO: this needs instructions
                         return false;
                     }
                     break;
                 case Symbols.open_bra:
-                    if (!this.statement_open_bra()) {
+                    if (!this.statement_open_bra()) { // TODO: this needs instructions
                         return false;
                     }
                     break;
                 case Symbols.while:
-                    if (!this.statement_while()) {
+                    if (!this.statement_while()) { // TODO: this needs instructions
                         return false;
                     }
                     break;
                 case Symbols.for:
-                    if (!this.statement_for()) {
+                    if (!this.statement_for()) { // TODO: this needs instructions
                         return false;
                     }
                     break;
                 case Symbols.foreach:
-                    if (!this.statement_foreach()) {
+                    if (!this.statement_foreach()) { // TODO: we don't have time to do this - remove it from lexer
                         return false;
                     }
                     break;
                 case Symbols.return:
-                    if (!this.statement_return()) {
+                    if (!this.statement_return()) { // TODO: this needs instructions
                         return false;
                     }
                     break;
@@ -657,6 +678,10 @@ let recursive_descent = (function() {
             return false;
         },
 
+        validate_variable_vs_symbol_data_type: function(variable) {
+            
+        },
+
         load_ident_and_type: function() {
             // this will be array of [name, data_type], where data_type can be null
             let name_and_type = this.block_ident_declaration();
@@ -867,6 +892,7 @@ let recursive_descent = (function() {
 
         statement_open_curl: function() {
             let ident_counter = 0;
+            let vars = [];
 
             // { verified by caller
             this.accept(Symbols.open_curl);
@@ -874,11 +900,17 @@ let recursive_descent = (function() {
             // ident {, ident}
             do {
                 if (!this.accept(Symbols.ident)) {
-                    this.error(this.symbol_value + " is not an valid identifier for multiple assignment.");
+                    this.error(this.symbol_value + " is not a valid identifier for multiple assignment.");
                     return false;
                 }
 
-                // TODO: store idents in array/ list - preserve indexes
+                let v = this.get_variable_by_name(this.last_symbol_value)
+                if (v == null) {
+                    this.error("Multiple assignment statement failed. Identifier: " + 
+                        this.last_symbol_value + " not found");
+                    return false;
+                }
+                vars.push(v);
 
                 ident_counter++;
             } while (this.accept(Symbols.comma));
@@ -897,6 +929,7 @@ let recursive_descent = (function() {
                 return false;
             }
 
+            let i = 0;
             // value {, value}
             do {
                 if (!this.accept(Symbols.input)) {
@@ -904,10 +937,13 @@ let recursive_descent = (function() {
                     return false;
                 }
 
-                // TODO: value type checking
-                // TODO: load into identifiers/ maybe load values to array or list and assign after
+                
+                // TODO: value type checking (after LINT refactor)
+                push_instruction(Instructions.LIT, 0, this.last_symbol_value);
+                push_instruction(Instructions.STO, vars[i].level, vars[i].position);
 
                 ident_counter--;
+                i++;
             } while (this.accept(Symbols.comma));
 
             if (ident_counter != 0) {
@@ -972,7 +1008,6 @@ let recursive_descent = (function() {
             this.accept(Symbols.begin);
             
             let rv;
-
             // statement {";" statement}
             do {
                 rv = this.statement();

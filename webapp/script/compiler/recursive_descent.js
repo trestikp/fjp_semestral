@@ -121,7 +121,12 @@ function print_instruction_list() {
 }
 
 let recursive_descent = (function() {
-    function make_var(name, type, value = null, constant = false, level = 0, position = 0) {
+    /**
+     * Makes object holding information about a variable. Name is required parameter but other parameters have default values.
+     */
+    function make_var(name, type = Symbols_Input_Type.integer, value = null, constant = false, level = 0, position = 0){
+        if (type == null)
+            type = Symbols_Input_Type.integer;
         return {name, type, value, constant, level, position};
     }
 
@@ -140,6 +145,7 @@ let recursive_descent = (function() {
         context_list: [],
 
         level_counter: 0,
+        expr_left_type: Symbols_Input_Type.ERR, // expressions validate data type against this - based on left side data type
     
         /**
          * Loads next symbol from lexer (tokenizer) into symbol variable. 
@@ -189,7 +195,8 @@ let recursive_descent = (function() {
             this.compilationErrors.push({
                 line: tokenizer.yylineno + 1,
                 err: err_msg,
-                symbol: this.symbol_value
+                // symbol: this.symbol_value
+                symbol: this.last_symbol_value
             });
         },
     
@@ -267,9 +274,12 @@ let recursive_descent = (function() {
         },
 
         expression: function() {
-            // expression can be "result" of call
-            if (this.statement_call())
-                return true;
+            // expression can be "result" of call, however to use statement_call, we must verify the "call" symbol
+            if (this.symbol == Symbols.call)
+                if (this.statement_call()) {
+                    return true;
+                    // TODO: get return data type from procedure and verify if the data type is correct + save the value from return statement
+                }
 
             // if the expression isn't call, then do normal expression
             let negate = false;
@@ -280,15 +290,62 @@ let recursive_descent = (function() {
                     negate = true;
             }
 
-            if (!this.term()) {
-                this.error("failed to evaluate term");
+            let term_type;
+            if ((term_type = this.term()) === false) {
+                this.error("Failed to evaluate term in expression.");
                 return false;
             }
 
+            let loop_term_type;
+            let operation;
+
+            // check if +/- operations are permitted with this data type
+            if (this.symbol == Symbols.minus)
+                if (term_type == Symbols_Input_Type.string || term_type == Symbols_Input_Type.boolean) {
+                    this.error("'Expression' error. Cannot subtract strings and booleans. Type error: " + term_type);
+                    return false;
+                }
+            
+            if (this.symbol == Symbols.plus)
+                if (term_type == Symbols_Input_Type.boolean) {
+                    this.error("'Expression' error. Cannot add booleans. Type error: " + term_type);
+                    return false;
+                }
+
             while (this.accept(Symbols.plus) || this.accept(Symbols.minus)) {
-                if (!this.term()) {
+                // 2 = addition, 3 = subtraction
+                operation = this.last_symbol_value == Symbols.plus ? 2 : 3;
+
+                if ((loop_term_type = this.term()) === false) {
                     this.error("failed to evaluate term");
                     return false;
+                }
+
+                if (term_type != loop_term_type) {
+                    this.error("'Expression' (addition/ subtraction expression) terms have different data type!" + 
+                    " Operations +,- cannot be executed with incompatible data types");
+                    return false;
+                }
+
+                if (operation == 2) {
+                    switch (term_type) {
+                        case Symbols_Input_Type.integer:
+                        case Symbols_Input_Type.float:
+                            push_instruction(Instructions.OPR, 0, operation);
+                            break;
+                        case Symbols_Input_Type.string:
+                            // TODO: string concat operations
+                            break;
+                        default:
+                            this.error("'Expression' failed because type: " + term_type + " does not support addtion.");
+                            return false;
+                    }
+                } else {
+                    if (term_type != Symbols_Input_Type.integer && term_type != Symbols_Input_Type.float) {
+                        this.error("'Expression' failed because type: " + term_type + " does not support subtraction.");
+                        return false;
+                    }
+                    push_instruction(Instructions.OPR, 0, operation);
                 }
             }
 
@@ -296,42 +353,90 @@ let recursive_descent = (function() {
         },
 
         term: function() {
-            if (!this.factor()) {
-                this.error("term failed to compile factor");
+            let factor_type;
+
+            // factor load/ prepares value to stack
+            if ((factor_type = this.factor()) === false) {
+                this.error("'Term' (multiplication/ division expression) failed to obtain factor");
                 return false;
             }
 
-            while (this.accept(Symbols.star) || this.accept(Symbols.slash)) {
-                // last_symbol contains which one it is
-                
-                if (!this.factor()) {
-                    this.error("term failed to compile factor");
+            let loop_factor_type;
+            let operation;
+
+            // same if as the loop below - if we go to the loop we need to verify, that the operation makes sense
+            if (this.symbol == Symbols.star || this.symbol == Symbols.slash)
+                if (factor_type == Symbols_Input_Type.string || factor_type == Symbols_Input_Type.boolean) {
+                    this.error("'Term' error. Cannot multiply or divide booleans or strings. Type error: " + 
+                        factor_type);
                     return false;
-                }   
+                }
+
+            while (this.accept(Symbols.star) || this.accept(Symbols.slash)) {
+                // already verified, that the operation is either * or /. Also must save operation before factor()
+                operation = this.last_symbol_value == Symbols.star ? 4 : 5; 
+                
+                if ((loop_factor_type = this.factor()) === false) {
+                    this.error("'Term' (multiplication/ division expression) failed to obtain additional factor");
+                    return false;
+                }
+
+                if (factor_type != loop_factor_type) {
+                    this.error("'Term' (multiplication/ division expression) factors have different data type!" + 
+                        " Operations *,/ cannot be executed with incompatible data types");
+                    return false;
+                }
+
+                // another factor was loaded to stack, operation between 2 factors is now to be done and result will be on the stack
+                push_instruction(Instructions.OPR, 0, operation);
             }
 
-            return true;
+            return factor_type;
         },
 
         factor: function() {
             if (this.accept(Symbols.ident)) {
-                // TODO verify ident is valid, instructions
-                return true;
-            } else if (this.accept(Symbols.number)) {
-                // TODO instructions
-                return true;
+                let v = this.get_variable_by_name(this.last_symbol_value);
+                if (v == null) {
+                    this.error("Could not load variable value, because variable: " + 
+                        this.last_symbol_value + " was not found.");
+                    return false;
+                }
+
+                push_instruction(Instructions.LOD, v.level, v.position);
+                return v.type;
             } else if (this.accept(Symbols.input)) {
-                // validate input for value (string, boolean)
-                return true;
+                // loading various data types must be handled differently
+                switch (symbol_input_type) {
+                    case Symbols_Input_Type.boolean:
+                        push_instruction(Instructions.LIT, 0, this.get_boolean_as_int(this.last_symbol_value));
+                        break;
+                    case Symbols_Input_Type.string:
+                        {
+                            // TODO: create string function - function that pushes the string to the memory and returns its address
+                            push_instruction(Instructions.LIT, 0, 123); // address from string init
+                            break;
+                        }
+                    case Symbols_Input_Type.float:
+                    case Symbols_Input_Type.integer:
+                        push_instruction(Instructions.LIT, 0, this.last_symbol_value);
+                        break;
+                    default:
+                        this.error("Cannot push value to stack. Unrecognized data type for: " + this.last_symbol_value);
+                }
+                
+                return symbol_input_type;
             } else if (this.accept(Symbols.open_bra)) {
                 if (!this.expression()) {
-                    this.error("failed to compile expression insinde factor");
+                    this.error("Failed to compile nested expression (inside another expressions factor)");
                     return false;
                 }
                 if (!this.accept(Symbols.close_bra)) {
-                    this.error("factor expression must be close by bracket ')'");
+                    this.error("Nested expression must be close with closing bracket - ')'");
                     return false;
                 }
+
+                // TODO: expression result is on stack. Make expression return result type, so it can be returned here
 
                 return true;
             }
@@ -430,6 +535,8 @@ let recursive_descent = (function() {
                         return false; // failed parsing
                         
                     // consts.push(var_obj);
+                    var_obj.position = 3 + vars.length; // 3 is used for registers
+                    var_obj.level = this.level_counter;
                     vars.push(var_obj);
                 } while (this.accept(Symbols.comma));
                 
@@ -446,6 +553,8 @@ let recursive_descent = (function() {
                     if ((var_obj = this.load_ident_and_type()) === false) 
                         return false; // failed parsing 
 
+                    var_obj.position = 3 + vars.length; // 3 is used for registers
+                    var_obj.level = this.level_counter;
                     vars.push(var_obj);
                 } while (this.accept(Symbols.comma));
                 
@@ -535,10 +644,14 @@ let recursive_descent = (function() {
          * private functions - used in non-terminal function calls                                                    *
          **************************************************************************************************************/
 
-        push_context: function(c_name, c_address) {
+        /**
+         * Pushes new context object to "context_list". Context must contain name and adress. Optionally context return
+         * type if present.
+         */
+        push_context: function(c_name, c_address, c_return_type = null) {
             console.log("adding context: " + c_name);
             // TODO: not doing error checking - is that ok? - only used privately anyway
-            this.context_list.push({c_name, c_address});
+            this.context_list.push({c_name, c_address, c_return_type});
             return this.context_list[this.context_list.length - 1];
         },
 
@@ -583,14 +696,9 @@ let recursive_descent = (function() {
 
             return null;
         },
-    
-        validate_input_as_data_type: function() {
-            Object.keys(Symbols_Input_Type).forEach(key => {
-                if (Symbols_Input_Type[key] == this.last_symbol_value)
-                    return true;
-            });
 
-            return false;
+        get_boolean_as_int: function(bool_string) {
+            return bool_string == "true" ? 1 : 0;
         },
 
         validate_data_type: function(input) {
@@ -637,6 +745,8 @@ let recursive_descent = (function() {
          * @returns Symbols_Input_Type value on success. "false" otherwise.
          */
         validate_value_and_type: function(value, expected_dtype) {
+            // TODO: if this is to be used it must be fixed, because lexer always returns string and typeof doesn't work on it
+
             switch (typeof value) {
                 case "number":
                     {
@@ -670,8 +780,8 @@ let recursive_descent = (function() {
             return false;
         },
 
-        validate_variable_vs_symbol_data_type: function(variable) {
-            
+        validate_last_type_to_expected: function(expected_dtype) {
+            return symbol_input_type == expected_dtype;
         },
 
         load_ident_and_type: function() {
@@ -687,7 +797,7 @@ let recursive_descent = (function() {
 
             if (name_and_type[1] != null)
                 if (!this.validate_data_type(name_and_type[1])) {
-                    this.error("Invalid data type while parsing constants or variables. Datatype: " + name_and_type[1]);
+                    this.error("Invalid data type while parsing constants or variables. Data type: " + name_and_type[1]);
                     return false;
                 }
 
@@ -716,10 +826,14 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            if (this.validate_value_and_type(this.last_symbol_value, var_obj.type) === false) {
+            if (this.validate_last_type_to_expected(var_obj.type) === false) {
                 this.error("Failed to validate value.");
                 return false;
             }
+            // if (this.validate_value_and_type(this.last_symbol_value, var_obj.type) === false) {
+            //     this.error("Failed to validate value.");
+            //     return false;
+            // }
 
             var_obj.value = this.last_symbol_value; // TODO: parse last_symbol_value as value of type?
             var_obj.constant = true;
@@ -761,6 +875,9 @@ let recursive_descent = (function() {
             let ident_name;
             let param_count = 0;
 
+            // increase level counter, because we are now "deeper"
+            this.level_counter++;
+
             // ident
             if (!this.accept(Symbols.ident)) {
                 this.error("Following identifier is invalid: " + this.last_symbol_value);
@@ -768,6 +885,11 @@ let recursive_descent = (function() {
             }
 
             ident_name = this.last_symbol_value; // name is valid identifier
+
+            let return_type;
+            if (this.accept(Symbols.data_type)) {
+                return_type = Symbols_Input_Type[this.last_symbol_value];
+            }
 
             // check if context name is available
             if (this.get_context_by_name(ident_name) != null) {
@@ -803,7 +925,7 @@ let recursive_descent = (function() {
             }
             
             // block
-            let current_context = this.push_context(ident_name, -1);
+            let current_context = this.push_context(ident_name, -1, return_type);
             let block_start = 0;
             if ((block_start = this.block()) === false) {
                 this.error("Failed to compile procedure (" + ident_name + ") body.");
@@ -816,6 +938,9 @@ let recursive_descent = (function() {
                 this.error("Procedure (" + ident_name + ") body must end with ';'");
                 return -1;
             }
+
+            // decrease level counter because we are returning
+            this.level_counter--;
 
             return param_count;
         },
@@ -951,13 +1076,13 @@ let recursive_descent = (function() {
             this.accept(Symbols.call);
 
             if (!this.accept(Symbols.ident)) {
-                this.error("Call failed because identifier: " + ident + " is invalid.");
+                this.error("Call failed because identifier: " + this.last_symbol_value + " is invalid.");
                 return false;
             }
 
             let context_index = this.get_context_index_by_name(this.last_symbol_value);
             if (context_index < 0) {
-                this.error("Call failed because identifier: " + ident + " does not exist.");
+                this.error("Call failed because identifier: " + this.last_symbol_value + " does not exist.");
                 return false;
             }
 

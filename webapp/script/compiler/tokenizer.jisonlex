@@ -26,7 +26,6 @@ string                  \"(.*?)\"
 "do"                    return Symbols.do;
 "else"                  return Symbols.else
 "end"                   return Symbols.end;
-"foreach"               return Symbols.foreach;
 "for"                   return Symbols.for;
 "if"                    return Symbols.if;
 "in"                    return Symbols.in;

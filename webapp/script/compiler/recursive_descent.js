@@ -105,14 +105,14 @@ function push_instruction_to_start(inst = Instructions.ERR, par1 = -1, par2 = -1
 // TODO: rename? - make print to code output html element
 function print_instruction_list() {
     let textArea = document.getElementById("editor-out");
-    textArea.value = ""; // clear the text area
+    textArea.innerHTML = ""; // clear the text area
     let line;
 
     for (i = 0; i < instruction_list.length; i++) {
         line = i + " " + instruction_list[i].inst + "\t" + 
                          instruction_list[i].par1 + "\t" + 
                          instruction_list[i].par2 + "\n";
-        textArea.value += line;
+        textArea.innerHTML += line;
 
         // console.log(i + " " + instruction_list[i].inst + "\t" + 
         //                       instruction_list[i].par1 + "\t" + 

@@ -4,6 +4,8 @@ const DEBUGGER_IP = "http://localhost:3000";
 (function ($) {
     let Parser = {};
 
+    const CONSOLE_HEIGHT = 200;
+
     //Private variables
     let lastErrors = [];
     let debuggerReady = false;
@@ -168,7 +170,8 @@ const DEBUGGER_IP = "http://localhost:3000";
         }
 
         // @ts-ignore 
-        middleEditor.style.maxHeight = middleEditor.getBoundingClientRect().height + "px";
+        
+        middleEditor.style.maxHeight = Math.min(middleEditor.getBoundingClientRect().height, window.innerHeight - CONSOLE_HEIGHT) + "px";
     }
 
 

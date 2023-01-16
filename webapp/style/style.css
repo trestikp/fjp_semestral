@@ -83,6 +83,7 @@ nav.bg-light, .resize.bg-light {
 
 #editor-in {
     overflow: auto;
+    padding: 0 !important;
 }
 
 #editor-out {

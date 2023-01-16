@@ -5,10 +5,16 @@ const DEBUGGER_IP = "http://localhost:3000";
     let Parser = {};
 
     const CONSOLE_HEIGHT = 200;
+    const VALIDATION_TIMEOUT = 1000;
+
+    const keywords = ["const", "procedure", "begin", "do", "while", "if", "then", "end", "call"];
+    const typeKeywords = ["var", "string", "integer", "float", "boolean"]
+    const operators = ["<=", "<", ">", "=>", "=", "odd"];
 
     //Private variables
     let lastErrors = [];
     let debuggerReady = false;
+    let editor = null;
 
     /** 
      * Event listener that binds all parsing functions to one public namespace.
@@ -17,7 +23,7 @@ const DEBUGGER_IP = "http://localhost:3000";
         //Preapre upload file event
         document.getElementById('upload')?.addEventListener('change', handleFileSelect, false);
 
-        initEditorHandlers();
+        initMonacoEditor();
         initPopover();
         initDebugger();
         initEditorMaxHeight();
@@ -35,77 +41,95 @@ const DEBUGGER_IP = "http://localhost:3000";
     //                  Initialize functions 
     //=======================================================
 
-    /**
-     * Prepare handlers for handling pressing Tab, Shift+Tab and other functions such as
-     * removing error dialogs from lines of code, etc..
-     */
-    function initEditorHandlers() {
-        document.getElementById("editor-in")?.addEventListener("keydown", (e) => {
-            if(e.key === 'Tab') {
-                //add tab
-                var sel, range;
-                if (window.getSelection && (sel = window.getSelection())?.rangeCount) {
-                    range = sel.getRangeAt(0);
-
-                    if (e.shiftKey) {
-                        // @ts-ignore
-                        let tabChildren = $(sel?.focusNode).find(".tab");
-                        if (tabChildren.length > 0) {
-                            tabChildren[0].remove();
+    function initMonacoEditor() {
+        monaco.languages.register({
+            id: 'mylang'
+        });
+        monaco.languages.setMonarchTokensProvider('mylang', {
+            keywords: keywords,
+            typeKeywords: typeKeywords,
+            operators: operators,
+            symbols:  /[=><!~?:&|+\-*\/\^%]+/,
+            tokenizer: {
+                root: [
+                    [ /\(\*.*\*\)/, 'comment'],
+                    [ /@?[a-zA-Z][\w$]*/, {
+                        cases: {
+                            '@keywords': 'keyword',
+                            '@typeKeywords': 'typeKeyword',
+                            '@operators': 'operator',
+                            '@default': 'variable'
                         }
-                    } else {
-                        range.collapse(true);
-                        var span = document.createElement("span");
-                        span.innerHTML = "  ";
-                        span.contentEditable = "false";
-                        span.classList.add("tab");
-                        range.insertNode(span);
-                
-                        // Move the caret immediately after the inserted span
-                        range.setStartAfter(span);
-                        range.collapse(true);
-                        sel.removeAllRanges();
-                        sel.addRange(range);
-                    }
-                }
-                //prevent focusing on next element
-                e.preventDefault()   
+                    }],
+                    [/@symbols/, { 
+                        cases: { 
+                            '@operators': 'operator',
+                            '@default'  : '' 
+                        } 
+                    }],
+                    [/".*?"/, 'string']
+                ]
             }
-
-            //Mozna to vyhodime, protoze to zase rozjebava select.. :/
-            const selection = window.getSelection();
-
-            if (!selection) {
-                return;
+        });
+        monaco.languages.registerCompletionItemProvider('mylang', {
+            provideCompletionItems: (model, position) => {
+                const suggestions = [
+                    ...keywords.map(k => {
+                        return {
+                            label: k,
+                            kind: monacoEditor.languages.CompletionItemKind.Keyword,
+                            insertText: k
+                        }
+                    }),
+                    ...typeKeywords.map(k => {
+                        return {
+                            label: k,
+                            kind: monacoEditor.languages.CompletionItemKind.TypeParameter,
+                            insertText: k
+                        }
+                    })
+                ]
             }
-            let anchorNode = selection.anchorNode;
-            if (anchorNode) {
-                let target = null;
-                /*debugger;
-                let classList = anchorNode.classList;
-                if (classList && classList.contains("err")) {
-                    target = anchorNode;
-                }
-
-                if (!target) {*/
-                    let classList = anchorNode.parentElement?.classList;
-                    
-                    if (classList && classList.contains("err")) {
-                        target = anchorNode.parentElement;
-                    }
-                //}
-
-                if (target) {
-                    const jqTarget = $(target);
-                    jqTarget.replaceWith(jqTarget.text());
-                }
-            } 
-
-            //Fucks up selection
-            /*document.getElementById("editor-in")?.addEventListener("input", (e) => {
-                e.target.innerHTML = e.target.innerHTML.replace("&nbsp;", "");
-            });*/
         })
+        monaco.editor.defineTheme('mylang-theme', {
+            colors: {},
+            base: 'vs',
+            rules: [
+                {token: 'keyword', foreground: "#FF6600", fontStyle: "bold"},
+                {token: 'typeKeyword', foreground: "#FF6600"},
+                {token: 'variable', foreground: "#006699"},
+                {token: 'operator', foreground: "#7CFC00"},
+                {token: 'comment', foreground: "#999999"}
+            ]
+        });
+        monaco.editor.defineTheme('mylang-theme-dark', {
+            colors: {
+                'editor.foreground': "#FFFFFF",
+                'editor.background': "#495057",
+                'textSeparator.foreground': "#FFFFFF"
+            },
+            base: 'vs-dark',
+            rules: [
+                {token: 'keyword', foreground: "#FF6600", fontStyle: "bold"},
+                {token: 'typeKeyword', foreground: "#FF6600"},
+                {token: 'variable', foreground: "#03a9fc"},
+                {token: 'operator', foreground: "#7CFC00"},
+                {token: 'comment', foreground: "#999999"}
+            ]
+        });
+        editor = monaco.editor.create(document.getElementById('editor-in'), {
+            value: "const m=7, n=85;\nvar x, y, z, q, r;\n\nprocedure nasobeni;\nvar a, b;\nbegin a := x; b:= y; z:=0;\n\twhile b > 0 do\n\tbegin\n\t\tif odd b then z := z + a;\n\t\t\ta := 2 * a; b := b / 2;\n\tend;\nend;\n\nprocedure deleni;\nvar w;\nbegin r:=x; q := 0; w:= y;\n\twhile w <= r do w := 2*w;\n\twhile w > y do\n\tbegin q:=2*q; w:=w/2;\n\t\tif w <= r\tthen\n\t\tbegin r:=r-w; q:=q+1;\n\t\tend;\n\tend;\nend;\n\nprocedure gcd;\nvar f, g;\nbegin f:=x; g:=y;\n\twhile f#g do\n\tbegin if f <g then g:=g-f;\n\t\tif g<f then f:=f-g;\n\tend;\n\tz := f;\nend;\nbegin\n\tx:=m; y:=n; call nasobeni;\n\ty:=25; y:=3; call deleni;\n\tx:=84; y:=36; call gcd;\nend.",
+            language: 'mylang',
+            theme: "mylang-theme-dark",
+            renderLineHighlight: "none"
+        });
+
+        var validationTimeoutHandle = null;
+        editor.onDidChangeModelContent(() => {
+          // debounce
+          clearTimeout(validationTimeoutHandle);
+          validationTimeoutHandle = setTimeout(() => Parser.parse(true), VALIDATION_TIMEOUT);
+        });
     }
 
     /**
@@ -183,29 +207,27 @@ const DEBUGGER_IP = "http://localhost:3000";
      * Primary function to read the content of the input window, use tokenizer and recursive descent
      * to parse the code and print it to the output.
      */
-    Parser.parse = function() {
-        Parser.writeToTerm("Compiling the program..");
-        let fake_input = "";
-        $("#editor-in").children().each((index, child) => {
-            let text = child?.textContent;
-
-            if (text) {
-                fake_input += text + "\n";
-            }
-        });
-
+    Parser.parse = function(validateOnly = false) {
+        if (!validateOnly) {
+            Parser.writeToTerm("Compiling the program..");
+        }
+        let codeToParse = editor.getValue(); //Replace the characters with empty line
 
         // @ts-ignore Added by library
-        tokenizer.setInput(fake_input);
+        tokenizer.setInput(codeToParse);
         // @ts-ignore Added by library
         lastErrors = recursive_descent.program();
 
         if (lastErrors.length == 0) {
-            Parser.writeToTerm("Program compiled successfully.", "green");
-            // @ts-ignore Added by library
-            print_instruction_list();
+            if (!validateOnly) {
+                Parser.writeToTerm("Program compiled successfully.", "green");
+                // @ts-ignore Added by library
+                print_instruction_list();
+            }
+            
+            monaco.editor.setModelMarkers(editor.getModel(), "owner", []); //Remove markers
         } else {
-            prepareErrors();
+            prepareErrors(validateOnly);
         }
     }
 
@@ -348,7 +370,6 @@ const DEBUGGER_IP = "http://localhost:3000";
         }
 
         if (!navigator.clipboard){
-            debugger;
             // @ts-ignore textArea is HTMLTextAreaElement not HTMLElement
             textArea.disabled = false;
             
@@ -405,11 +426,34 @@ const DEBUGGER_IP = "http://localhost:3000";
     }
 
     /**
+     * Prints error message to the terminal
+     * 
+     * @param {string} errText Error message to show in the terminal
+     */
+    Parser.error = function(errText) {
+        Parser.writeToTerm(errText, "red");
+    } 
+
+    Parser.setMonacoMode= function(mode) {
+        if (mode == 0) {
+            monaco.editor.setTheme("mylang-theme-dark");
+        } else {
+            monaco.editor.setTheme("mylang-theme");
+        }
+    }
+
+    //=======================================================
+    //                  Private methods
+    //=======================================================
+
+    
+
+    /**
      * Processess incoming message from the debugger.
      * 
      * @param {object} event Event object from the debugger containing data
      */
-    function handleIntegrationMessage(event) {
+     function handleIntegrationMessage(event) {
         const data = event.data;
 
         if (data.target == "integration") {
@@ -450,22 +494,9 @@ const DEBUGGER_IP = "http://localhost:3000";
     }
 
     /**
-     * Prints error message to the terminal
-     * 
-     * @param {string} errText Error message to show in the terminal
-     */
-    Parser.error = function(errText) {
-        Parser.writeToTerm(errText, "red");
-    } 
-
-    //=======================================================
-    //                  Private methods
-    //=======================================================
-
-    /**
      * Show underlines under each word that caused parsing error.
      */
-    function prepareErrors() {
+    function prepareErrors(validateOnly) {
         //Remove previous errors from the page
         $(".err").each((index, element) => {
             const jqTarget = $(element);
@@ -475,21 +506,40 @@ const DEBUGGER_IP = "http://localhost:3000";
         //Show message in console
         for (const errorIndex in lastErrors) {
             const error = lastErrors[errorIndex];
-            Parser.writeToTerm("Error: " + error.err + " (line: " + error.line + ", symbol: " + error.symbol +")", "red")
+
+            if (!validateOnly) {
+                Parser.error("Error: " + error.err + " (line: " + error.line + ", symbol: " + error.symbol +")");
+            }
         }
 
         //Underline the errors
         const children = $("#editor-in").children();
+        const codeLines = editor.getValue().split("\n");
+
+        let errorMarkers = [];
+
         for (const errorIndex in lastErrors) {
             const error = lastErrors[errorIndex];
+
+            //TODO Replace with Monaco call
+
+            const targetLineIndex = error.line - 1;
+            const targetLine = codeLines[targetLineIndex];
+
+            const startIndex = targetLine.indexOf(error.symbol);
+            const endIndex = targetLine.indexOf(error.symbol) + error.symbol.length + 1;
             
-            const targetDiv = children.eq(error.line - 1); //Elements start at 0 but lines at 1
-            targetDiv.html(targetDiv.html().replace(error.symbol, "<span class='err' rel='errPopover' data-errIndex='" + errorIndex + "'>" + error.symbol + "</span>"));
-            const targetUnderlinedError = targetDiv.find(".err[data-errindex='" + errorIndex + "']");
-            targetUnderlinedError.on("change", (e) => {
-                debugger;
+            errorMarkers.push({
+                startLineNumber: error.line,
+                endLineNumber: error.line,
+                startColumn: startIndex,
+                endColumn: endIndex,
+                message: error.err,
+                severity: monaco.MarkerSeverity.Error
             })
         }
+
+        monaco.editor.setModelMarkers(editor.getModel(), "owner", errorMarkers);
     }
 
     /**
@@ -518,19 +568,13 @@ const DEBUGGER_IP = "http://localhost:3000";
             // @ts-ignore uploadElement is HTMLInputElement not HTMLElement
             uploadElement.value = "";
 
-            let editorInElement = document.getElementById("editor-in");
-            if(!editorInElement) {
-                Parser.error("Could not find editor input element.")
-                return;
-            }
-
             let target = e.target;
             if (!target) {
                 Parser.error("Could not read target event.")
                 return;
             }
             
-            editorInElement.innerHTML = target.result + "";
+            editor.setValue(target.result + "");
             Parser.writeToTerm("Successfully uploaded file: " + f.name);
         };
         })(f);

@@ -12,11 +12,14 @@ window.addEventListener("load", function() {
             modeSwitchButton.classList.add("light", "btn-primary");
 
             modeSwitchButton.replaceChildren(lightIcon);
+
+            Parser.setMonacoMode(1);
         } else {
             modeSwitchButton.classList.remove("light", "btn-primary");
             modeSwitchButton.classList.add("dark", "btn-warning");
 
             modeSwitchButton.replaceChildren(darkIcon);
+            Parser.setMonacoMode(0);
         }
 
         let darkElements = document.querySelectorAll(".bg-dark");

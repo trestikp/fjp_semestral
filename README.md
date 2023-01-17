@@ -35,7 +35,7 @@ TURN-IN CHECKLIST:
     - [ ] \#
 - [x] if
 - [x] else
-- [ ] while
+- [x] while
 - [ ] for
 - [ ] return value
 - [ ] multiple assignment

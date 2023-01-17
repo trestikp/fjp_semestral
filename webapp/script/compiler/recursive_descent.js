@@ -85,7 +85,8 @@ const Instructions = {
 let instruction_list = [];
 
 function push_instruction(inst = Instructions.ERR, par1 = -1, par2 = -1) {
-    if (inst === Instructions.ERR || par1 === -1 || par2 === -1) {
+    if (inst === Instructions.ERR) {
+        // TODO: when this fails, the compilation continues...
         console.log("ERROR - tried to push instructions without specifing all parameters");
         return;
     }
@@ -94,7 +95,7 @@ function push_instruction(inst = Instructions.ERR, par1 = -1, par2 = -1) {
 };
 
 function push_instruction_to_start(inst = Instructions.ERR, par1 = -1, par2 = -1) {
-    if (inst === Instructions.ERR || par1 === -1 || par2 === -1) {
+    if (inst === Instructions.ERR) {
         console.log("ERROR - tried to push instructions without specifing all parameters");
         return;
     }
@@ -456,7 +457,9 @@ let recursive_descent = (function() {
                         }
                     case Symbols_Input_Type.float:
                     case Symbols_Input_Type.integer:
-                        push_instruction(Instructions.LIT, 0, this.last_symbol_value);
+                        // push_instruction(Instructions.LIT, 0, this.last_symbol_value);
+                        // NOTE: praseFloat should return integer value, if the value doesn't have decimal part
+                        push_instruction(Instructions.LIT, 0, parseFloat(this.last_symbol_value));
                         break;
                     default:
                         this.error("Cannot push value to stack. Unrecognized data type for: " + this.last_symbol_value);
@@ -746,10 +749,15 @@ let recursive_descent = (function() {
         },
 
         validate_data_type: function(input) {
-            Object.keys(Symbols_Input_Type).forEach(key => {
-                if (Symbols_Input_Type[key] == input)
+            let types = Object.keys(Symbols_Input_Type);
+            for (i = 0; i < types.length; i++) {
+                if (types[i] == input)
                     return true;
-            });
+            }
+            // Object.keys(Symbols_Input_Type).forEach(key => {
+            //     if (key == input)
+            //         return true;
+            // });
 
             return false;
         },
@@ -1312,35 +1320,46 @@ let recursive_descent = (function() {
             // for verified by caller
             this.accept(Symbols.for);
 
-            let start, end;
+            let double_inst_start = instruction_list.length;
 
-            if (!(this.accept(Symbols.input) && symbol_input_type == Symbols_Input_Type.integer)) {
-                this.error("For loop needs first number is a starting point.");
+            if (this.expression() != Symbols_Input_Type.integer) {
+                this.error("Failed to parse starting point of for loop.");
                 return false;
             }
-
-            start = this.last_symbol_value;
 
             if (!this.accept(Symbols.to)) {
                 this.error("For loop needs 'to' before second number.");
                 return false;
             }
-            if (!(this.accept(Symbols.input) && symbol_input_type == Symbols_Input_Type.integer)) {
-                this.error("For loop needs first number is a ending point.");
+
+            if (this.expression() != Symbols_Input_Type.integer) {
+                this.error("Failed to parse target point of for loop.");
                 return false;
             }
 
-            end = this.last_symbol_value;
+            // === prepare control var
+            push_instruction(Instructions.OPR, 0, 3); // expr2 - expr1 = iteration count
+            
+            let double_inst_end = instruction_list.length;
+            // double all instruction in this statement up until this point
+            // reason: we need the diff of expression twice - once for comparison and once for actual iteration
+            for (i = double_inst_start; i < double_inst_end; i++) {
+                instruction_list.push(Object.assign({}, instruction_list[i]));
+            }
 
-            let it_count = parseInt(end) - parseInt(start);
+            push_instruction(Instructions.LIT, 0, 0); // push 0 to top of the stack
+            push_instruction(Instructions.OPR, 0, 10); // test: it_count < 0
+            push_instruction(Instructions.JMC, 0, 0); // expr2 - expr1 = iteration count
+            let it_count_absolute = instruction_list.length;
+            push_instruction(Instructions.OPR, 0, 1); // negate value (it_coutn) if its < 0 (making it positive)
+            it_count_absolute.par2 = instruction_list.length;
 
-            push_instruction(Instructions.LIT, 0, 0); // control var
+            // === start for
             let for_start = instruction_list.length;
-            push_instruction(Instructions.LIT, 0, 1); // +1
-            push_instruction(Instructions.OPR, 0, 2); // increment control variable
-
-            push_instruction(Instructions.LIT, 0, it_count); // condition (stop variable)
-            push_instruction(Instructions.OPR, 0, 11); // increment control variable (TODO: lt or lte??)
+            push_instruction(Instructions.LIT, 0, 1); // push 1 to top of the stack
+            push_instruction(Instructions.OPR, 0, 3); // decrement control variable
+            push_instruction(Instructions.LIT, 0, 0); // push 0 to top of the stack
+            push_instruction(Instructions.OPR, 0, 12); // is control_var > 0 (or 13 for >=)
             push_instruction(Instructions.JMC, 0, 0);
             let for_end = instruction_list[instruction_list.length - 1];
 

@@ -99,7 +99,6 @@ factor = ident | number | "(" expression ")";
                   | "(" condition ") ? " "return" statement ":" "return" statement
                   | "while" condition "do" statement
                   | "for" number "to" number "do" statement
-                  | "foreach" ident "in" array_ident "do" statement ]
                   | "return" value;
 
     condition = "odd" expression |

@@ -52,7 +52,7 @@ const DEBUGGER_IP = "http://localhost:3000";
             symbols:  /[=><!~?:&|+\-*\/\^%]+/,
             tokenizer: {
                 root: [
-                    [ /\(\*.*\*\)/, 'comment'],
+                    [ /\(\*/, 'comment', '@comment'],
                     [ /@?[a-zA-Z][\w$]*/, {
                         cases: {
                             '@keywords': 'keyword',
@@ -68,6 +68,10 @@ const DEBUGGER_IP = "http://localhost:3000";
                         } 
                     }],
                     [/".*?"/, 'string']
+                ],
+                comment: [
+                    [/[^\*\)]+/,    'comment' ],
+                    [/\*\)/,        'comment', '@pop'  ]
                 ]
             }
         });

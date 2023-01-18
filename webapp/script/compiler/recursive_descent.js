@@ -108,7 +108,7 @@ function print_instruction_list() {
     textArea.innerHTML = ""; // clear the text area
     let line;
 
-    for (i = 0; i < instruction_list.length; i++) {
+    for (let i = 0; i < instruction_list.length; i++) {
         line = i + " " + instruction_list[i].inst + "\t" + 
                          instruction_list[i].par1 + "\t" + 
                          instruction_list[i].par2 + "\n";
@@ -672,7 +672,7 @@ let recursive_descent = (function() {
                 this.error("The program MUST end with '.' (dot)");
 
             // must push in reverse to keep correct order when pushing to start
-            for (i = (this.context_list.length - 1); i >= 0; i--) {
+            for (let i = (this.context_list.length - 1); i >= 0; i--) {
                 push_instruction_to_start(Instructions.JMP, 0, this.context_list[i].c_address);
                 console.log("%d pushing %s", i, this.context_list[i].c_name);
             }
@@ -706,7 +706,7 @@ let recursive_descent = (function() {
          * Searches the context_list. If the list contains object with @c_name returns it. Returns null otherwise.
          */
         get_context_by_name: function (c_name) {
-            for (i in this.context_list) {
+            for (let i in this.context_list) {
                 if (this.context_list[i].c_name == c_name) {
                     return this.context_list[i];
                 }
@@ -716,7 +716,7 @@ let recursive_descent = (function() {
         },
 
         get_context_index_by_name: function (c_name) {
-            for (i in this.context_list) {
+            for (let i in this.context_list) {
                 if (this.context_list[i].c_name == c_name) {
                     return i;
                 }
@@ -732,10 +732,10 @@ let recursive_descent = (function() {
          */
         get_variable_by_name: function (var_name) {
             // reversing the list from end, because new scopes are at the end of the list
-            for (i = (this.variables.length - 1); i >= 0; i--) {
+            for (let i = (this.variables.length - 1); i >= 0; i--) {
                 let inner_list = this.variables[i];
                 // reversing inner list, because constants are at the start of the list, which might not be as desired as variables
-                for (j = (inner_list.length - 1); j >= 0; j--) {
+                for (let j = (inner_list.length - 1); j >= 0; j--) {
                     if (inner_list[j].name == var_name)
                         return inner_list[j];
                 }
@@ -750,7 +750,7 @@ let recursive_descent = (function() {
 
         validate_data_type: function(input) {
             let types = Object.keys(Symbols_Input_Type);
-            for (i = 0; i < types.length; i++) {
+            for (let i = 0; i < types.length; i++) {
                 if (types[i] == input)
                     return true;
             }
@@ -1343,7 +1343,7 @@ let recursive_descent = (function() {
             let double_inst_end = instruction_list.length;
             // double all instruction in this statement up until this point
             // reason: we need the diff of expression twice - once for comparison and once for actual iteration
-            for (i = double_inst_start; i < double_inst_end; i++) {
+            for (let i = double_inst_start; i < double_inst_end; i++) {
                 instruction_list.push(Object.assign({}, instruction_list[i]));
             }
 

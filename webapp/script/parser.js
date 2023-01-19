@@ -9,7 +9,7 @@ const DEBUGGER_IP = "http://localhost:3000";
 
     const keywords = ["const", "procedure", "begin", "do", "while", "if", "then", "end", "call"];
     const typeKeywords = ["var", "string", "integer", "float", "boolean"]
-    const operators = ["<=", "<", ">", "=>", "=", "odd"];
+    const operators = ["<=", "<", ">", ">=", "=", "odd"];
 
     //Private variables
     let lastErrors = [];

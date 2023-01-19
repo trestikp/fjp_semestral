@@ -103,3 +103,11 @@ nav.bg-light, .resize.bg-light {
     max-height: 100vh !important;
 }
 
+.modal-content {
+    border: 0 !important;
+}
+
+.modal-body {
+    max-height: 75vh;
+    overflow-x: auto;
+}

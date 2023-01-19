@@ -33,14 +33,19 @@
     //=======================================================
 
     TestRunner.runAllTests = function() {
-        if (!tests) {
+        /*if (!tests) {
             Parser.error("Tests are not ready yet.");
             return;
-        }
+        }*/
+
+        $('#testResultsModal').modal('toggle');
 
         let testCounter = 0;
         let failedTests = 0;
         let successTests = 0;
+
+        let testResultContent = document.querySelector("#testResultsModal .modal-body");
+        testResultContent.innerHTML = "";
 
         for (var index in tests) {
             const currentTest = tests[index];
@@ -58,16 +63,39 @@
     
                         //Remove sucessful test
                         $("script[src='" + currentTestPath + "']").remove();
+
+                        testResultContent.append(createResult(currentTest, null, true));
                     } catch (e) {
                         console.error("Test " + currentTest + " failed. Error: " + e);
                         failedTests++;
     
                         //Remove the failed test
                         $("script[src='" + currentTestPath + "']").remove();
+                        testResultContent.append(createResult(currentTest, e, false));
                     }
                 }
             });
         }
+
+        let dividerElement = document.createElement("div");
+        dividerElement.classList.add("my-3", "p-0", "bg-secondary");
+        dividerElement.style.height = "2px";
+
+        let testRunElement = document.createElement("h6");
+        testRunElement.innerHTML = "Tests run: " + testCounter;
+
+        let testSuccessElement = document.createElement("h6");
+        testSuccessElement.classList.add("text-success");
+        testSuccessElement.innerHTML = "Successful tests: " + successTests;
+
+        let testFailedElement = document.createElement("h6");
+        testFailedElement.classList.add("text-danger");
+        testFailedElement.innerHTML = "Failed tests: " + failedTests;
+
+        testResultContent.append(dividerElement);
+        testResultContent.append(testRunElement);
+        testResultContent.append(testSuccessElement);
+        testResultContent.append(testFailedElement);
 
         console.log("Testing finished. Ran tests: " + testCounter + ", Successfull tests: " + successTests + ", Failed tests: " + failedTests);
     }
@@ -78,5 +106,18 @@
     //                  Private methods
     //=======================================================
 
-    
+    function createResult(testName, errorString, isSuccess) {
+        let resultElement = document.createElement("div");
+        resultElement.classList.add("text-light", "my-1", "p-1");
+
+        if (isSuccess) {
+            resultElement.classList.add("bg-success");
+            resultElement.innerHTML = testName;
+        } else {
+            resultElement.classList.add("bg-danger");
+            resultElement.innerHTML = testName + " - " + errorString;
+        }
+
+        return resultElement;
+    }
 })($);

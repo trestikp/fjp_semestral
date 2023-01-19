@@ -54,6 +54,9 @@
                 <button class="btn btn-success" type="button" onclick="Examples.loadExample()">Load example</button>
             </li>
         </ul>
+        <button class="btn btn-success me-2 my-sm-0" type="submit" onclick="TestRunner.runAllTests()">
+            Run tests
+        </button>
         <button class="btn btn-warning me-2 my-sm-0 dark" type="submit" id="switchModeBtn">
             <i class="bi bi-brightness-high"></i>
         </button>
@@ -124,6 +127,23 @@
             <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, go back to the editor.</button>
             <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="Parser.upload()">Yes, upload!</button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="testResultsModal" tabindex="-1" aria-labelledby="testResultsLabel" aria-hidden="true">
+        <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+            <h5 class="modal-title" id="testResultsLabel">Test results</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                
+            </div>
+            <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
         </div>

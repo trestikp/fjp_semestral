@@ -1,4 +1,9 @@
 [
     "staticTest.js",
-    "dynamicTest.js"
+    "dynamicTest.js",
+    "floatArithmetics.js",
+    "ifElse.js",
+    "intArithmetics.js",
+    "intConditions.js",
+    "loop.js"
 ]

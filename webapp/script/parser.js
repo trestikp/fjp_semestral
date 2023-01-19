@@ -212,11 +212,11 @@ const DEBUGGER_IP = "http://localhost:3000";
      * Primary function to read the content of the input window, use tokenizer and recursive descent
      * to parse the code and print it to the output.
      */
-    Parser.parse = function(validateOnly = false) {
+    Parser.parse = function(validateOnly = false, input = null) {
         if (!validateOnly) {
             Parser.writeToTerm("Compiling the program..");
         }
-        let codeToParse = editor.getValue(); //Replace the characters with empty line
+        let codeToParse = (input != null ? input : editor.getValue());
 
         // @ts-ignore Added by library
         tokenizer.setInput(codeToParse);

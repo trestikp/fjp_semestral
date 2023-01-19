@@ -17,31 +17,27 @@
         let symbol;
         let i = 0;
 
-        try {
+        do {
             do {
-                do {
-                    symbol = tokenizer.next();
-                } while (symbol === false); // next returns "false" on whitespace
+                symbol = tokenizer.next();
+            } while (symbol === false); // next returns "false" on whitespace
 
-                if (symbol == tokenizer.EOF) break; // TODO: this is quick fix - make it to just the while
+            if (symbol == tokenizer.EOF) break; // TODO: this is quick fix - make it to just the while
 
-                if (i >= dynamic_types_result.length) {
-                    throw "Lexer test_dynamic error: result overflow";
-                    i++;
-                }
-
-                if (symbol !== Symbols.input)
-                    throw "Lexer test_dynamic error: " + symbol + " doesn't match any input! Resulting symbol is: " + symbol;
-
-                if (symbol_input_type !== dynamic_types_result[i])
-                    throw "Lexer test_dynamic error: " + symbol_input_type + " (value : " + tokenizer.yytext + ") " +
-                        " isn't a supported data type or doesn't match result. Expected: " + dynamic_types_result[i];
-                
+            if (i >= dynamic_types_result.length) {
+                throw "Lexer test_dynamic error: result overflow";
                 i++;
-            } while (symbol != tokenizer.EOF);
-        } catch (ex) {
-            throw "Lexer test_static error while parsing test string.\n" + ex;
-        }
+            }
+
+            if (symbol !== Symbols.input)
+                throw "Lexer test_dynamic error: " + symbol + " doesn't match any input! Resulting symbol is: " + symbol;
+
+            if (symbol_input_type !== dynamic_types_result[i])
+                throw "Lexer test_dynamic error: " + symbol_input_type + " (value : " + tokenizer.yytext + ") " +
+                    " isn't a supported data type or doesn't match result. Expected: " + dynamic_types_result[i];
+            
+            i++;
+        } while (symbol != tokenizer.EOF);
 
         console.log("Dynamic lexer test finished");
     }

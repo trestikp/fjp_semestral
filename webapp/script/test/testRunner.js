@@ -100,6 +100,22 @@
         console.log("Testing finished. Ran tests: " + testCounter + ", Successfull tests: " + successTests + ", Failed tests: " + failedTests);
     }
 
+
+    TestRunner.validateInstructions = function(expectedInstructions) {
+        for (let index in instruction_list) {
+            if (instruction_list[index].inst != expectedInstructions[index][1]) {
+                throw "Missmatch instruction on line " + index + ". Expected " + expectedInstructions[index][1] + ", but got " + instruction_list[index].inst;
+            }
+
+            if (instruction_list[index].par1 != expectedInstructions[index][2]) {
+                throw "Missmatch parameter 1 on line " + index + ". Expected " + expectedInstructions[index][2] + ", but got " + instruction_list[index].par1;
+            }
+
+            if (instruction_list[index].par2 != expectedInstructions[index][3]) {
+                throw "Missmatch parameter 2 on line " + index + ". Expected " + expectedInstructions[index][3] + ", but got " + instruction_list[index].par2;
+            }
+        }
+    } 
     
 
     //=======================================================

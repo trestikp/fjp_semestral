@@ -22,27 +22,23 @@
         let symbol;
         let i = 0;
 
-        try {
+        do {
             do {
-                do {
-                    symbol = tokenizer.next();
-                } while (symbol === false); // next returns "false" on whitespace
+                symbol = tokenizer.next();
+            } while (symbol === false); // next returns "false" on whitespace
 
-                if (symbol == tokenizer.EOF) break; // TODO: this is quick fix - make it to just the while
+            if (symbol == tokenizer.EOF) break; // TODO: this is quick fix - make it to just the while
 
-                if (i >= static_results.length) {
-                    throw "Lexer test_static error: no expected results for symbol (number " + i + "): " + symbol;
-                    i++;
-                    continue;
-                }
-                if (symbol !== static_results[i]) 
-                    throw "Lexer test_static error: " + symbol + " doesn't match expected result: " + static_results[i];
-                
+            if (i >= static_results.length) {
+                throw "Lexer test_static error: no expected results for symbol (number " + i + "): " + symbol;
                 i++;
-            } while (symbol != tokenizer.EOF);
-        } catch (ex) {
-            throw "Lexer test_static error while parsing test string.\n" + ex;
-        }
+                continue;
+            }
+            if (symbol !== static_results[i]) 
+                throw "Lexer test_static error: " + symbol + " doesn't match expected result: " + static_results[i];
+            
+            i++;
+        } while (symbol != tokenizer.EOF);
 
         console.log("Static lexer test finished");
     }

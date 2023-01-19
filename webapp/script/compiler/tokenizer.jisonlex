@@ -16,6 +16,9 @@ string                  \"(.*?)\"
 "/"                     return Symbols.slash;
 "+"                     return Symbols.plus;
 "-"                     return Symbols.minus;
+"&"                     return Symbols.ampersand;
+"|"                     return Symbols.pipe;
+"~"                     return Symbols.tilde;
 {bool}                  { symbol_input_type = Symbols_Input_Type.boolean;   return Symbols.input; }
 {float}                 { symbol_input_type = Symbols_Input_Type.float;     return Symbols.input; }
 {integer}               { symbol_input_type = Symbols_Input_Type.integer;   return Symbols.input; }

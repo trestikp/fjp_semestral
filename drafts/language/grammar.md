@@ -95,13 +95,18 @@ factor = ident | number | "(" expression ")";
                   | "?" ident
                   | "!" expression 
                   | "begin" statement {";" statement } "end" 
-                  | "if" condition "then" statement [ "else" statement ]
-                  | "(" condition ") ? " "return" statement ":" "return" statement
-                  | "while" condition "do" statement
+                  | "if" condition_expression "then" statement [ "else" statement ]
+                  | "(" condition_expression ") ? " "return" statement ":" "return" statement
+                  | "while" condition_expression "do" statement
                   | "for" number "to" number "do" statement
                   | "return" value;
 
+    condition_expression = [ condition | "~" condition ] { ("&"|"|") condition }
+
     condition = "odd" expression |
+                "~" condition |
+                "&" condition |
+                "|" condition |
                 expression ("="|"#"|"<"|"<="|">"|">=") expression ;
 
     expression = [ "+"|"-"] term { ("+"|"-") term} | "call" ident;

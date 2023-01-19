@@ -39,8 +39,11 @@ const Symbols = {
     minus:          "-",
     star:           "*", 
     slash:          "/",
-    comment_start:   "(*",
+    comment_start:  "(*",
     comment_end:    "*)",
+    ampersand:      "&",
+    pipe:           "|",
+    tilde:          "~",
     // dynamic inputs (dependant on input) - must read input
     ident:          "id",
     input:          "input",
@@ -201,21 +204,57 @@ let recursive_descent = (function() {
                 symbol: this.last_symbol_value
             });
         },
-    
-        // not using this fuction, because using only accept if enough for custom errors
-        // expect: function(sym) {
-        //     if (this.accept(sym)) return true; // or return sym;
-    
-        //     this.error("Expected symbol: " + sym + " but found: " + this.symbol_value);
-        //     return false;
-    
-        //     // if (this.next_sym() !== sym) {
-        //     //     error("Expected symbol: " + sym + " but found: " + this.symbol_value);
-        //     //     return false;
-        //     // }
-            
-        //     // return sym;
-        // },
+
+        condition_expression: function() {
+            this.condition_expression_inner();
+
+            let is_true_on_and;
+            while (this.accept(Symbols.ampersand) || this.accept(Symbols.pipe)) {
+                is_true_on_and = this.last_symbol_value == Symbols.ampersand ? true : false;
+
+                this.condition_expression_inner();
+
+                if (is_true_on_and) {
+                    push_instruction(Instructions.OPR, 0, 2); // cond1 + cond2
+                    push_instruction(Instructions.LIT, 0, 2); // push 2
+                    push_instruction(Instructions.OPR, 0, 8); // if equal to 2, both conditions are true - 1 pushed to stack
+                } else {
+                    push_instruction(Instructions.OPR, 0, 2); // cond1 + cond2
+                    push_instruction(Instructions.LIT, 0, 0); // push 2
+                    push_instruction(Instructions.OPR, 0, 9); // if not equal to 0, then either (or both) conditions is true - 1 pushed to stack
+                }
+            }
+
+            return true;
+        },
+
+        negate_condtion_inst: function() {
+            // result of condition (comparison operator) can only be 1/0
+            // (res + 1) % 2 = new_res - should invert truth value
+            push_instruction(Instructions.LIT, 0, 1);
+            push_instruction(Instructions.OPR, 0, 2);
+            // push_instruction(Instructions.LIT, 0, 2);
+            push_instruction(Instructions.OPR, 0, 7);
+            // push_instruction(Instructions.OPR, 0, 6); // is odd = % 2 (saves one instruction - vs. push 2 + modulo)
+        },
+
+        condition_expression_inner: function() {
+            let negate_cond = false;
+
+            if (this.accept(Symbols.tilde)) {
+                negate_cond = true;
+            }
+
+            if (!this.condition()) {
+                this.error("Failed to evaluate condition.");
+                return false;
+            }
+
+            // result of the condition is on stack
+            if (negate_cond) {
+                this.negate_condtion_inst();
+            }
+        },
 
         condition: function() {
             let expr_type;
@@ -608,7 +647,7 @@ let recursive_descent = (function() {
             // must push vars before procedures, so we can use them in procs
             // let var_index = this.variables.length; // maybe for verification that we are later popping correct stack
             if (vars.length > 0)
-            this.variables.push(vars);
+                this.variables.push(vars);
 
             let pp_count = 0; // procedure-param count
             // procedures
@@ -647,8 +686,9 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // TODO: is this wanted?
-            this.variables.pop(); // at the top of the array should be only this blocks stack - maybe verify with index?
+            // pop variables of this context, only if there are any
+            if (vars.length > 0)
+                this.variables.pop();
 
             push_instruction(Instructions.RET, 0, 0);
 
@@ -1202,7 +1242,7 @@ let recursive_descent = (function() {
             // if verified by caller
             this.accept(Symbols.if);
 
-            if (!this.condition()) {
+            if (!this.condition_expression()) {
                 this.error("Failed to evaluate if condition.");
                 return false;
             }
@@ -1247,7 +1287,7 @@ let recursive_descent = (function() {
             this.accept(Symbols.open_bra);
 
             // condition
-            if (!this.condition()) {
+            if (!this.condition_expression()) {
                 this.error("Failed to evaluate tenrary operator condition.");
                 return false;
             }
@@ -1292,7 +1332,7 @@ let recursive_descent = (function() {
 
             let while_start_addr = instruction_list.length;
 
-            if (!this.condition()) {
+            if (!this.condition_expression()) {
                 this.error("Failed to compile while condition.");
                 return false;
             }

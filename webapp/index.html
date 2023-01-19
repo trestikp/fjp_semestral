@@ -26,6 +26,7 @@
     <script src="script/resizer.js"></script>
     <script src="script/modeSwitch.js"></script>
     <script src="script/parser.js"></script>
+    <script src="script/examples.js"></script>
     <script src="script/compiler/recursive_descent.js"></script>
     <script src="script/compiler/tokenizer.js"></script>
     <script src="script/test/testRunner.js"></script>
@@ -44,6 +45,13 @@
                 <button class="btn btn-success my-2 my-sm-0 ms-2" type="submit" onclick="Parser.parse()">
                     <i class="bi bi-play-fill"></i>
                 </button>
+            </li>
+            <li class="nav-item my-2 my-sm-0 ms-2">
+                <select id="exampleSelector" class="form-control">
+                </select>
+            </li>
+            <li class="nav-item my-2 my-sm-0 ms-2">
+                <button class="btn btn-success" type="button" onclick="Examples.loadExample()">Load example</button>
             </li>
         </ul>
         <button class="btn btn-warning me-2 my-sm-0 dark" type="submit" id="switchModeBtn">

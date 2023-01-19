@@ -1,7 +1,7 @@
 (*
 This example is happy day for following features
 
-3. **integer** variable and constant (whole number) (not sure if this isn't basically done by the language itself)
+3. **integer** variable and constant (whole number) (not sure if this is not basically done by the language itself)
 4. **assignments** defined in original PL/0
 5. **basic operations (+,-,*,/,&,|,^,())(==, <=, <, >, >=)** 
 6. **loops** - one is compulsory. Other loop types are for bonus points. For now lets try **for, while, foreach (if we will have arrays)**

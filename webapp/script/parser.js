@@ -446,6 +446,10 @@ const DEBUGGER_IP = "http://localhost:3000";
         }
     }
 
+    Parser.setInputValue = function(value) {
+        editor.setValue(value);
+    }
+
     //=======================================================
     //                  Private methods
     //=======================================================
@@ -578,7 +582,7 @@ const DEBUGGER_IP = "http://localhost:3000";
                 return;
             }
             
-            editor.setValue(target.result + "");
+            Parser.setInputValue(target.result + "");
             Parser.writeToTerm("Successfully uploaded file: " + f.name);
         };
         })(f);

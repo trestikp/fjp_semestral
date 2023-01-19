@@ -22,5 +22,8 @@ begin
     if 1 >= 1 then res := res + 1;
              else res := res + 1000;
 
-    (* expected res value: 3003*)
+    if odd 1 then res := res + 1;
+             else res := res + 1000;
+
+    (* expected res value: 3004*)
 end.

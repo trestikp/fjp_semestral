@@ -42,4 +42,4 @@ TURN-IN CHECKLIST:
 - [ ] expression priority with ()
 - [ ] parameters? (not even done)
 - [ ] ternary? (not even done - doesn't have much use)
-- [ ] TODO: AND, OR, NEG (compulsory?)
+- [x] AND, OR, NEG (in some basic form)

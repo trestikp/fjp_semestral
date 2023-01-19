@@ -83,6 +83,24 @@ const Instructions = {
     ERR:    "ERR",
 }
 
+// https://usermanual.wiki/Pdf/PL020Users20Manual.15518986/help
+const OPR = {
+    return:             0,
+    negation:           1,
+    addition:           2,
+    subtraction:        3,
+    multiplication:     4,
+    division:           5,
+    odd:                7, // WARNING: interpreter swapped odd with module compared to the manual
+    modulo:             6, // WARNING: same as odd
+    equality:           8,
+    inequality:         9,
+    less_than:          10,
+    less_then_equal:    11,
+    greater_than:       12,
+    greater_than_equal: 13,
+}
+
 
 // TODO: this would be nice to have it private - only accessible through functions
 let instruction_list = [];
@@ -215,13 +233,13 @@ let recursive_descent = (function() {
                 this.condition_expression_inner();
 
                 if (is_true_on_and) {
-                    push_instruction(Instructions.OPR, 0, 2); // cond1 + cond2
+                    push_instruction(Instructions.OPR, 0, OPR.addition); // cond1 + cond2
                     push_instruction(Instructions.LIT, 0, 2); // push 2
-                    push_instruction(Instructions.OPR, 0, 8); // if equal to 2, both conditions are true - 1 pushed to stack
+                    push_instruction(Instructions.OPR, 0, OPR.equality);
                 } else {
-                    push_instruction(Instructions.OPR, 0, 2); // cond1 + cond2
+                    push_instruction(Instructions.OPR, 0, OPR.addition); // cond1 + cond2
                     push_instruction(Instructions.LIT, 0, 0); // push 2
-                    push_instruction(Instructions.OPR, 0, 9); // if not equal to 0, then either (or both) conditions is true - 1 pushed to stack
+                    push_instruction(Instructions.OPR, 0, OPR.inequality); // if not equal to 0, then either (or both) conditions is true - 1 pushed to stack
                 }
             }
 
@@ -232,10 +250,8 @@ let recursive_descent = (function() {
             // result of condition (comparison operator) can only be 1/0
             // (res + 1) % 2 = new_res - should invert truth value
             push_instruction(Instructions.LIT, 0, 1);
-            push_instruction(Instructions.OPR, 0, 2);
-            // push_instruction(Instructions.LIT, 0, 2);
-            push_instruction(Instructions.OPR, 0, 7);
-            // push_instruction(Instructions.OPR, 0, 6); // is odd = % 2 (saves one instruction - vs. push 2 + modulo)
+            push_instruction(Instructions.OPR, 0, OPR.addition);
+            push_instruction(Instructions.OPR, 0, OPR.odd);
         },
 
         condition_expression_inner: function() {
@@ -271,7 +287,7 @@ let recursive_descent = (function() {
                 }
 
                 // assuming expression result is on top of the stack
-                push_instruction(Instructions.OPR, 0, 6); // 6 = is odd - in reality does modulo, but that should work
+                push_instruction(Instructions.OPR, 0, OPR.odd);
 
                 return true;
             } else if ((expr_type = this.expression())) {
@@ -280,27 +296,27 @@ let recursive_descent = (function() {
                 switch (this.symbol) {
                     case Symbols.eq:
                         this.accept(Symbols.eq);
-                        op_number = 8; // 8 = equal
+                        op_number = OPR.equality; // 8 = equal
                         break;
                     case Symbols.hash_mark:
                         this.accept(Symbols.hash_mark);
-                        op_number = 9; // 9 = inequal
+                        op_number = OPR.inequality; // 9 = inequal
                         break;
                     case Symbols.lt:
                         this.accept(Symbols.lt);
-                        op_number = 10; // 10 = less than
+                        op_number = OPR.less_than; // 10 = less than
                         break;
                     case Symbols.lte:
                         this.accept(Symbols.lte);
-                        op_number = 11; // 11 = less than or equal
+                        op_number = OPR.less_then_equal; // 11 = less than or equal
                         break;
                     case Symbols.gt:
                         this.accept(Symbols.gt);
-                        op_number = 12; // 12 = greater than
+                        op_number = OPR.greater_than; // 12 = greater than
                         break;
                     case Symbols.gte:
                         this.accept(Symbols.gte);
-                        op_number = 13; // 13 = greater than or equal
+                        op_number = OPR.greater_than_equal; // 13 = greater than or equal
                         break;
                     default:
                         this.error("Unrecognized comparison operation.");
@@ -320,7 +336,7 @@ let recursive_descent = (function() {
                 }
 
                 // strings and booleans can only be compared for equality/ inequality
-                if (op_number >= 9 && 
+                if (op_number >= OPR.inequality && 
                     (expr_type == Symbols_Input_Type.string || expr_type == Symbols_Input_Type.boolean)) 
                 {
                     this.error("Condition cannot be evaluated. Strings and boolean can only be " + 
@@ -390,7 +406,7 @@ let recursive_descent = (function() {
 
             while (this.accept(Symbols.plus) || this.accept(Symbols.minus)) {
                 // 2 = addition, 3 = subtraction
-                operation = this.last_symbol_value == Symbols.plus ? 2 : 3;
+                operation = this.last_symbol_value == Symbols.plus ? OPR.addition : OPR.subtraction;
 
                 if ((loop_term_type = this.term()) === false) {
                     this.error("failed to evaluate term");
@@ -450,7 +466,7 @@ let recursive_descent = (function() {
 
             while (this.accept(Symbols.star) || this.accept(Symbols.slash)) {
                 // already verified, that the operation is either * or /. Also must save operation before factor()
-                operation = this.last_symbol_value == Symbols.star ? 4 : 5; 
+                operation = this.last_symbol_value == Symbols.star ? OPR.multiplication : OPR.division; 
                 
                 if ((loop_factor_type = this.factor()) === false) {
                     this.error("'Term' (multiplication/ division expression) failed to obtain additional factor");

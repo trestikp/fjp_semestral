@@ -82,10 +82,22 @@
         ["79", "LIT", "0", "1000"],
         ["80", "OPR", "0", "2"],
         ["81", "STO", "0", "3"],
-        ["82", "RET", "0", "0"]
+        ["82", "LIT", "0", "1"],
+        ["83", "OPR", "0", "7"],
+        ["84", "JMC", "0", "90"],
+        ["85", "LOD", "0", "3"],
+        ["86", "LIT", "0", "1"],
+        ["87", "OPR", "0", "2"],
+        ["88", "STO", "0", "3"],
+        ["89", "JMP", "0", "94"],
+        ["90", "LOD", "0", "3"],
+        ["91", "LIT", "0", "1000"],
+        ["92", "OPR", "0", "2"],
+        ["93", "STO", "0", "3"],
+        ["94", "RET", "0", "0"],
     ]
 
-    let inputCode = "var res;\n\nbegin\n\tres := 0;\n\n\t(* +1 *)\n\tif 1 = 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1000 *)\n\tif 1 # 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1000 *)\n\tif 1 < 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1 *)\n\tif 1 <= 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1000 *)\n\tif 1 > 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1 *)\n\tif 1 >= 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\n\t(* expected res value: 3003*)\nend.";
+    let inputCode = "var res;\n\nbegin\n\tres := 0;\n\n(* +1 *)\nif 1 = 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1000 *)\n\tif 1 # 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1000 *)\n\tif 1 < 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1 *)\n\tif 1 <= 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1000 *)\n\tif 1 > 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1 *)\n\tif 1 >= 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\n\tif odd 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\n\t(* expected res value: 3004*)\nend.";
 
 
     window.runTestCase = function() {

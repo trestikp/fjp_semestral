@@ -4,6 +4,7 @@
     "boolean.js",
     "conditionConcat.js",
     "floatArithmetics.js",
+    "floatConditions.js",
     "ifElse.js",
     "intArithmetics.js",
     "intConditions.js",

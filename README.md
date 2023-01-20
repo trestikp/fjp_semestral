@@ -1,7 +1,6 @@
 # FJP semestral
 - supposed theme: PL/0 compiler with simple IDE in JS/ web
 - the first draft grammar seems too simple - can it work? should it include various types?
-- TODO: calling a procedure with params example is wrong (doesn't take the parameters)
 
 TURN-IN CHECKLIST:
 - integer:
@@ -45,5 +44,5 @@ TURN-IN CHECKLIST:
 - [x] parallel assignment
 - [x] expression priority with - tried with booleans, seems to work (TODO: test other data types)
 - [ ] parameters? (not even done)
-- [ ] ternary? (not even done - doesn't have much use)
+- [x] ternary - its useless, cannot be used to assign values to variables... basically if with different syntax
 - [x] AND, OR, NEG (in some basic form)

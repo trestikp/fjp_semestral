@@ -160,8 +160,6 @@ function has_type_action(type, action) {
     return false;
 }
 
-
-// TODO: this would be nice to have it private - only accessible through functions
 let instruction_list = [];
 
 function push_instruction(inst = Instructions.ERR, par1 = -1, par2 = -1) {
@@ -429,7 +427,8 @@ let recursive_descent = (function() {
                 switch (expr_type) {
                     case Symbols_Input_Type.string:
                         // TODO: cutom string comparions
-                        break;
+                        this.error("Operation with strings is not supported at the moment.");
+                        return false;
                     case Symbols_Input_Type.boolean: // boolean is represented as 1/0 - same operations as int
                     case Symbols_Input_Type.integer:
                     case Symbols_Input_Type.float:
@@ -512,7 +511,8 @@ let recursive_descent = (function() {
                             break;
                         case Symbols_Input_Type.string:
                             // TODO: string concat operations
-                            break;
+                            this.error("Operation with strings is not supported at the moment.");
+                            return false;
                         default:
                             this.error("'Expression' failed because type: " + term_type + " does not support addtion.");
                             return false;
@@ -624,7 +624,6 @@ let recursive_descent = (function() {
                     return false;
                 }
 
-                // TODO: this will be useless with recursion - for that dynamic level counter would be needed (recursion will never work...)
                 push_instruction(Instructions.LOD, Math.abs(v.level - this.level_counter), v.position);
                 return v.type;
             } else if (this.accept(Symbols.input)) {
@@ -635,9 +634,10 @@ let recursive_descent = (function() {
                         break;
                     case Symbols_Input_Type.string:
                         {
+                            this.error("Operation with strings is not supported at the moment.");
                             // TODO: create string function - function that pushes the string to the memory and returns its address
-                            push_instruction(Instructions.LIT, 0, 123); // address from string init
-                            break;
+                            // push_instruction(Instructions.LIT, 0, 123); // address from string init
+                            return false;
                         }
                     case Symbols_Input_Type.float:
                     case Symbols_Input_Type.integer:
@@ -706,7 +706,7 @@ let recursive_descent = (function() {
                     }
                     break;
                 case Symbols.open_bra:
-                    if (!this.statement_open_bra()) { // TODO: this needs instructions
+                    if (!this.statement_open_bra()) {
                         return false;
                     }
                     break;
@@ -991,48 +991,6 @@ let recursive_descent = (function() {
             return [ident_name, data_type];
         },
 
-        /**
-         * Validates if value is valid data type and determines it. Also validates against expected data type.
-         * @param {*} value that is validated or resolved.
-         * @param {*} expected_dtype can be null. Expected data type of the value
-         * @returns Symbols_Input_Type value on success. "false" otherwise.
-         */
-        validate_value_and_type: function(value, expected_dtype) {
-            // TODO: if this is to be used it must be fixed, because lexer always returns string and typeof doesn't work on it
-
-            switch (typeof value) {
-                case "number":
-                    {
-                        if (!isNaN(value)) return false;
-                        // value type doesn't match expected data type
-                        if (expected_dtype != null && 
-                            (expected_dtype[1] != Symbols_Input_Type["integer"] || expected_dtype[1] != Symbols_Input_Type["float"]))
-                        {
-                            this.error("Data type mismatch. Recieved number (int/ float), but declaration expects: " + expected_dtype);
-                            return false;
-                        }
-                        
-                        return Number.isInteger(value) ? Symbols_Input_Type["integer"] : Symbols_Input_Type["float"];
-                    }
-                case "string":
-                    {
-                        // typeof validates that the value is string
-                        if (expected_dtype != null && expected_dtype != Symbols_Input_Type["string"]) return false;
-                        return Symbols_Input_Type["string"];
-                    }
-                case "boolean":
-                    {
-                        // typeof validates that the value is true/ false
-                        if (expected_dtype != null && expected_dtype != Symbols_Input_Type["boolean"]) return false;
-                        return Symbols_Input_Type["boolean"];
-                    }
-                default:
-                    this.error("Unrecognized data type. Supported data types are: integer, float, string");
-            }
-
-            return false;
-        },
-
         validate_last_type_to_expected: function(expected_dtype) {
             return symbol_input_type == expected_dtype;
         },
@@ -1174,7 +1132,8 @@ let recursive_descent = (function() {
         statement_ident: function() {
             // simple version: ident := expression; // where ; is checked by caller
             // multiple assignments: ident := ident := ident := expression; // problem: ident can expression - how to determine when it ends?
-            // TODO: will have to add additional rule to the grammar
+            
+            // TODO: need grammar improvement for multiple assignment and ternary operator to be expression
 
             // first "ident" already verified by caller
             this.accept(Symbols.ident);

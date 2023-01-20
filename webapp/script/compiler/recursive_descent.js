@@ -147,19 +147,6 @@ dtype_operations.set(Symbols_Input_Type.boolean, [Symbols.eq, Symbols.hash_mark,
                                                   Symbols.pipe]);
 dtype_operations.set(Symbols_Input_Type.string,  [Symbols.eq, Symbols.hash_mark, Symbols.plus]);
 
-function has_type_action(type, action) {
-    if (dtype_operations.has(type)) {
-        if (dtype_operations.get(type).indexOf(action) >= 0)
-            return true;
-
-        this.error("Type: " + type +" does not support action: " + action);
-    } else {
-        this.error("Cannot verify action for type: " + type + ". This type does not exist.");
-    }
-
-    return false;
-}
-
 let instruction_list = [];
 
 function push_instruction(inst = Instructions.ERR, par1 = -1, par2 = -1) {
@@ -207,10 +194,12 @@ let recursive_descent = (function() {
     /**
      * Makes object holding information about a variable. Name is required parameter but other parameters have default values.
      */
-    function make_var(name, type = Symbols_Input_Type.integer, value = null, constant = false, level = 0, position = 0){
+    function make_var(name, type = Symbols_Input_Type.integer, value = null, constant = false, level = 0, 
+                      position = 0, is_param = false)
+    {
         if (type == null)
             type = Symbols_Input_Type.integer;
-        return {name, type, value, constant, level, position};
+        return {name, type, value, constant, level, position, is_param};
     }
 
     let descent = ({
@@ -556,7 +545,7 @@ let recursive_descent = (function() {
                     return false;
                 }
 
-                if (!has_type_action(inner_type, operation)) {
+                if (!this.has_type_action(inner_type, operation)) {
                     this.error("'Term' error. Type: " + inner_type + " does not suppord operation: " + operation);
                     return false;
                 }
@@ -599,7 +588,7 @@ let recursive_descent = (function() {
             }
 
             if (negate) {
-                if (!has_type_action(factor_type, Symbols.tilde))
+                if (!this.has_type_action(factor_type, Symbols.tilde))
                     return false; // error printed by has_type_action
                 
                 if (factor_type == Symbols_Input_Type.boolean) {
@@ -788,9 +777,7 @@ let recursive_descent = (function() {
             }
 
             // must push vars before procedures, so we can use them in procs
-            // let var_index = this.variables.length; // maybe for verification that we are later popping correct stack
-            // if (vars.length > 0)
-                this.variables.push(vars);
+            this.variables.push(vars);
 
             let pp_count = 0; // procedure-param count
             // procedures
@@ -838,11 +825,11 @@ let recursive_descent = (function() {
             }
 
             // pop variables of this context, only if there are any
-            // if (vars.length > 0)
-                this.variables.pop();
+            this.variables.pop();
 
             // setting stack frame allocation AFTER statements, because statements can require "dynamic" number of variables
-            stac_alloc_inst.par2 = this.SB_DB_PC_RV + pp_count + vars.length + this.for_var_count;
+            // pp_count is no longer used, because parameters are added to the "vars" array
+            stac_alloc_inst.par2 = this.SB_DB_PC_RV + vars.length + this.for_var_count;
 
             this.for_var_count = 0;
 
@@ -898,9 +885,9 @@ let recursive_descent = (function() {
          * Pushes new context object to "context_list". Context must contain name and adress. Optionally context return
          * type if present.
          */
-        push_context: function(c_name, c_address, c_return_type = null) {
+        push_context: function(c_name, c_address, c_return_type = null, c_par_count = 0, c_var_count = 0) {
             console.log("adding context: " + c_name);
-            this.context_list.push({c_name, c_address, c_return_type});
+            this.context_list.push({c_name, c_address, c_return_type, c_par_count, c_var_count});
             return this.context_list[this.context_list.length - 1];
         },
 
@@ -961,6 +948,19 @@ let recursive_descent = (function() {
             //         return true;
             // });
 
+            return false;
+        },
+
+        has_type_action: function(type, action) {
+            if (dtype_operations.has(type)) {
+                if (dtype_operations.get(type).indexOf(action) >= 0)
+                    return true;
+        
+                this.error("Type: " + type +" does not support action: " + action);
+            } else {
+                this.error("Cannot verify action for type: " + type + ". This type does not exist.");
+            }
+        
             return false;
         },
 
@@ -1078,16 +1078,20 @@ let recursive_descent = (function() {
                 return -1;
             }
 
+            let vars = this.variables[this.variables.length - 1];
+            let var_obj;
             // optionally parameters
             // [ "(" ident [ : data_type ] {"," ident [ : data_type ]} ")" ]
             if (this.accept(Symbols.open_bra)) {
-                // 
+                // param can theorethically be flagged as constant and such as well - but not impelmented
                 do {
-                    if (this.block_ident_declaration() == null) 
-                        return -1; // failed parsing 
-
-                    param_count++;
-                    // TODO: save param name to some structure
+                    if ((var_obj = this.load_ident_and_type()) === false) 
+                        return false; // failed parsing 
+    
+                    var_obj.position = this.SB_DB_PC_RV + vars.length;
+                    var_obj.level = this.level_counter;
+                    var_obj.is_param = true;
+                    vars.push(var_obj);
                 } while (this.accept(Symbols.comma));
                 
                 // ;
@@ -1104,20 +1108,13 @@ let recursive_descent = (function() {
             }
             
             // block
-            let current_context = this.push_context(ident_name, -1, return_type);
+            let current_context = this.push_context(ident_name, -1, return_type, param_count, vars.length);
             let block_start = 0;
             if ((block_start = this.block()) === false) {
                 this.error("Failed to compile procedure (" + ident_name + ") body.");
                 return -1;
             }
             current_context.c_address = block_start;
-
-            // not checking for ;, because EVERY (except begin) statement in the procedure must end with ; (statement consumes the ;)
-            // ;
-            // if (!this.accept(Symbols.semicolon)) {
-            //     this.error("Procedure (" + ident_name + ") body must end with ';'");
-            //     return -1;
-            // }
 
             // decrease level counter because we are returning
             this.level_counter--;
@@ -1270,8 +1267,34 @@ let recursive_descent = (function() {
 
             // except for main - main is always index 0 and is first instruction of the program
             push_instruction(Instructions.CAL, 0, context_index);
-            
+
             let context = this.context_list[context_index];
+            if (this.accept(Symbols.open_bra)) {
+                let i = 0;
+
+                do {
+                    if(this.expression() === false) {
+                        this.error("Failed to evaluate parameter expression.");
+                        return false;
+                    }
+
+                    push_instruction(Instructions.STO, 0, context.c_var_count - context.c_par_count + i);
+
+                    i++;
+                    if (i > context.c_par_count) {
+                        this.error("The call has more parameters then the procedure defines.");
+                        return false;
+                    }
+
+                } while (!this.accept(Symbols.close_bra));
+                if (!this.accept(Symbols.close_bra)) {
+                    
+
+                    this.error("Parameter list must be ended with ')'");
+                    return false;
+                }
+            }
+            
             return context.c_return_type;
         },
 

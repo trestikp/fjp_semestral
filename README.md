@@ -32,7 +32,7 @@ TURN-IN CHECKLIST:
     - [x] |
     - [x] =
     - [x] \#
-- string:
+- string: --- CANCELED
     - [ ] \+
     - [ ] =
     - [ ] \#
@@ -41,9 +41,9 @@ TURN-IN CHECKLIST:
 - [x] while
 - [x] for
 - [x] return value - tested integer only (TODO: test other data types)
-- [ ] multiple assignment
+- [ ] multiple assignment --- CANCELED
 - [x] parallel assignment
-- [ ] expression priority with ()
+- [x] expression priority with - tried with booleans, seems to work (TODO: test other data types)
 - [ ] parameters? (not even done)
 - [ ] ternary? (not even done - doesn't have much use)
 - [x] AND, OR, NEG (in some basic form)

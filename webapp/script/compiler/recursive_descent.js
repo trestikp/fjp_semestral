@@ -84,6 +84,41 @@ const Instructions = {
 }
 
 // https://usermanual.wiki/Pdf/PL020Users20Manual.15518986/help
+// const OPR = {
+//     return:             0,
+//     negation:           1,
+//     addition:           2,
+//     subtraction:        3,
+//     multiplication:     4,
+//     division:           5,
+//     odd:                6,
+//     modulo:             7,
+//     equality:           8,
+//     inequality:         9,
+//     less_than:          10,
+//     less_then_equal:    11,
+//     greater_than:       12,
+//     greater_than_equal: 13,
+// }
+
+// KIV/FJP inerpret operations
+// export enum OperationType {
+//     U_MINUS = 1,
+//     ADD = 2,
+//     SUB = 3,
+//     MULT = 4,
+//     DIV = 5,
+//     MOD = 6,
+//     IS_ODD = 7,
+//     EQ = 8,
+//     N_EQ = 9,
+//     LESS_THAN = 10,
+//     MORE_EQ_THAN = 11,
+//     MORE_THAN = 12,
+//     LESS_EQ_THAN = 13,
+// }
+
+// operations according to the online interpret for KIV/FJP (some operations are under different number)
 const OPR = {
     return:             0,
     negation:           1,
@@ -96,9 +131,9 @@ const OPR = {
     equality:           8,
     inequality:         9,
     less_than:          10,
-    less_then_equal:    11,
+    less_then_equal:    13, // WARNING: changed compared to manual
     greater_than:       12,
-    greater_than_equal: 13,
+    greater_than_equal: 11, // WARNING: changed compared to manual
 }
 
 
@@ -113,7 +148,12 @@ function push_instruction(inst = Instructions.ERR, par1 = -1, par2 = -1) {
     }
 
     instruction_list.push({inst, par1, par2});
-};
+}
+
+function push_instruction_and_return(inst = Instructions.ERR, par1 = -1, par2 = -1) {
+    push_instruction(inst, par1, par2);
+    return instruction_list[instruction_list.length - 1];
+}
 
 function push_instruction_to_start(inst = Instructions.ERR, par1 = -1, par2 = -1) {
     if (inst === Instructions.ERR) {
@@ -122,7 +162,7 @@ function push_instruction_to_start(inst = Instructions.ERR, par1 = -1, par2 = -1
     }
 
     instruction_list.unshift({inst, par1, par2});
-};
+}
 
 function print_instruction_list() {
     let textArea = document.getElementById("editor-out");
@@ -152,21 +192,21 @@ let recursive_descent = (function() {
     }
 
     let descent = ({
-        SB_DB_PC: 3,
+        SB_DB_PC_RV: 4, // basic registers (static base, dynamic base, program counter) + newly added Return Value
         symbol: null,
         last_symbol_value: null,
         symbol_value: null,
         symbol_counter: 0, // increases when lexer parses symbol - can be used to underline syntax errors (should correspond to error word)
         compilationErrors: [],
 
-        // constants: [],
-        // variables: [],
+        // variables and context_list represent symbol table
         // array of arrays for constants and variables in a scope - every inner array is one scope of a level (index should correspons to level)
         variables: [],
-        // context_list: new Object(), // wanted it as a map, but array will have to do
         context_list: [],
 
         level_counter: 0,
+        for_nest_counter: 0, // holds total number of nested if
+        for_var_count: 0, // increses/ decreses when entering/ leaving for loop
         expr_left_type: Symbols_Input_Type.ERR, // expressions validate data type against this - based on left side data type
     
         /**
@@ -630,7 +670,7 @@ let recursive_descent = (function() {
                         return false; // failed parsing
                         
                     // consts.push(var_obj);
-                    var_obj.position = this.SB_DB_PC + vars.length;
+                    var_obj.position = this.SB_DB_PC_RV + vars.length;
                     var_obj.level = this.level_counter;
                     vars.push(var_obj);
                 } while (this.accept(Symbols.comma));
@@ -648,7 +688,7 @@ let recursive_descent = (function() {
                     if ((var_obj = this.load_ident_and_type()) === false) 
                         return false; // failed parsing 
 
-                    var_obj.position = this.SB_DB_PC + vars.length;
+                    var_obj.position = this.SB_DB_PC_RV + vars.length;
                     var_obj.level = this.level_counter;
                     vars.push(var_obj);
                 } while (this.accept(Symbols.comma));
@@ -662,7 +702,7 @@ let recursive_descent = (function() {
 
             // must push vars before procedures, so we can use them in procs
             // let var_index = this.variables.length; // maybe for verification that we are later popping correct stack
-            if (vars.length > 0)
+            // if (vars.length > 0)
                 this.variables.push(vars);
 
             let pp_count = 0; // procedure-param count
@@ -678,7 +718,7 @@ let recursive_descent = (function() {
             let block_start = instruction_list.length;
 
             // alloc space for variables in current stack frame
-            push_instruction(Instructions.INT, 0, this.SB_DB_PC + pp_count + vars.length);
+            let stac_alloc_inst = push_instruction_and_return(Instructions.INT, 0, 0);
 
             // initialize constant values
             vars.forEach(function (val, i) {
@@ -703,8 +743,15 @@ let recursive_descent = (function() {
             }
 
             // pop variables of this context, only if there are any
-            if (vars.length > 0)
+            // if (vars.length > 0)
                 this.variables.pop();
+
+            // setting stack frame allocation AFTER statements, because statements can require "dynamic" number of variables
+            stac_alloc_inst.par2 = this.SB_DB_PC_RV + pp_count + vars.length + this.for_var_count;
+
+            console.log("Allocated " + this.for_var_count + " cells for for loops"); // TODO: remove - debug
+
+            this.for_var_count = 0;
 
             push_instruction(Instructions.RET, 0, 0);
 
@@ -1079,8 +1126,15 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            if (!this.expression()) {
+            let expr_type;
+            if ((expr_type = this.expression()) === false) {
                 this.error("Assignment must end with a valid expression.");
+                return false;
+            }
+
+            if (variable.type != expr_type) {
+                this.error("Assignment failed. Left and right side type mismatch. Cannot store: " + 
+                    expr_type + "into: " + variable.type);
                 return false;
             }
 
@@ -1376,7 +1430,13 @@ let recursive_descent = (function() {
             // for verified by caller
             this.accept(Symbols.for);
 
-            let double_inst_start = instruction_list.length;
+            this.for_nest_counter++;
+            if (this.for_nest_counter > this.for_var_count)
+                this.for_var_count = this.for_nest_counter;
+
+            // control variable position (must be -1)
+            let cv_position = this.SB_DB_PC_RV + this.variables[this.variables.length - 1].length + 
+                              this.for_nest_counter - 1;
 
             if (this.expression() != Symbols_Input_Type.integer) {
                 this.error("Failed to parse starting point of for loop.");
@@ -1394,30 +1454,27 @@ let recursive_descent = (function() {
             }
 
             // === prepare control var
-            push_instruction(Instructions.OPR, 0, 3); // expr2 - expr1 = iteration count
-            
-            let double_inst_end = instruction_list.length;
-            // double all instruction in this statement up until this point
-            // reason: we need the diff of expression twice - once for comparison and once for actual iteration
-            for (let i = double_inst_start; i < double_inst_end; i++) {
-                instruction_list.push(Object.assign({}, instruction_list[i]));
-            }
-
+            push_instruction(Instructions.OPR, 0, 3); // expr1 - expr2 = iteration count
+            push_instruction(Instructions.STO, 0, cv_position);
+            push_instruction(Instructions.LOD, 0, cv_position);
             push_instruction(Instructions.LIT, 0, 0); // push 0 to top of the stack
-            push_instruction(Instructions.OPR, 0, 10); // test: it_count < 0
-            push_instruction(Instructions.JMC, 0, 0); // expr2 - expr1 = iteration count
-            let it_count_absolute = instruction_list.length;
-            push_instruction(Instructions.OPR, 0, 1); // negate value (it_coutn) if its < 0 (making it positive)
-            it_count_absolute.par2 = instruction_list.length;
+            push_instruction(Instructions.OPR, 0, OPR.less_than); // test: it_count < 0
+            let negate_cv_jump = push_instruction_and_return(Instructions.JMC, 0, 0); // expr2 - expr1 = iteration count
+            push_instruction(Instructions.LOD, 0, cv_position);
+            push_instruction(Instructions.OPR, 0, OPR.negation); // negate value (it_coutn) if its < 0 (making it positive)
+            push_instruction(Instructions.STO, 0, cv_position);
+            negate_cv_jump.par2 = instruction_list.length;
 
-            // === start for
+            // === for
             let for_start = instruction_list.length;
-            push_instruction(Instructions.LIT, 0, 1); // push 1 to top of the stack
-            push_instruction(Instructions.OPR, 0, 3); // decrement control variable
-            push_instruction(Instructions.LIT, 0, 0); // push 0 to top of the stack
-            push_instruction(Instructions.OPR, 0, 12); // is control_var > 0 (or 13 for >=)
-            push_instruction(Instructions.JMC, 0, 0);
-            let for_end = instruction_list[instruction_list.length - 1];
+            push_instruction(Instructions.LOD, 0, cv_position);
+            push_instruction(Instructions.LIT, 0, 1);
+            push_instruction(Instructions.OPR, 0, OPR.subtraction);
+            push_instruction(Instructions.STO, 0, cv_position);
+            push_instruction(Instructions.LOD, 0, cv_position);
+            push_instruction(Instructions.LIT, 0, 0);
+            push_instruction(Instructions.OPR, 0, OPR.greater_than_equal); // doing equal for 1 more it. -> 3-8 = |5| not |4|
+            let for_jump_instruction = push_instruction_and_return(Instructions.JMC, 0, 0);
 
             if (!this.accept(Symbols.do)) {
                 this.error("Expected 'do' before for statement.");
@@ -1429,12 +1486,9 @@ let recursive_descent = (function() {
             }
 
             push_instruction(Instructions.JMP, 0, for_start);
-            for_end.par2 = instruction_list.length; // TODO: maybe -1 here?
+            for_jump_instruction.par2 = instruction_list.length; // TODO: maybe -1 here?
 
-            // clean control var from stack
-            push_instruction(Instructions.JMP, 0, for_start);
-            push_instruction(Instructions.INT, 0, -1);
-            push_instruction(Instructions.JMP, 0, instruction_list.length); // TODO: maybe -1 here?
+            this.for_nest_counter--;
 
             return true;
         },

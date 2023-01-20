@@ -89,29 +89,26 @@ factor = ident | number | "(" expression ")";
             [ "var" ident [":" data_type] {"," ident [":" data_type]} ";"]
             { "procedure" [data_type] ident [ "(" ident [ : data_type ] {"," ident [ : data_type ]} ")" ] ";" block ";" } statement ;
 
-    statement = [ ident ":=" {ident ":="} expression 
+    statement = [ ident ":=" expression 
                   | "{" ident {, ident} "} := {" value{, value} "}" 
                   | "call" ident
                   | "?" ident
                   | "!" expression 
                   | "begin" statement {";" statement } "end" 
                   | "if" condition_expression "then" statement [ "else" statement ]
-                  | "(" condition_expression ") ? " "return" statement ":" "return" statement
+                  | "(" condition_expression ") ? " expression ":" expression
                   | "while" condition_expression "do" statement
-                  | "for" number "to" number "do" statement
-                  | "return" value;
+                  | "for" expression "to" expression "do" statement
+                  | "return" expression;
 
-    condition_expression = [ condition | "~" condition ] { ("&"|"|") condition }
+    condition_expression = ["~"] condition { ("&"|"|") ["~"] condition }
 
     condition = "odd" expression |
-                "~" condition |
-                "&" condition |
-                "|" condition |
                 expression ("="|"#"|"<"|"<="|">"|">=") expression ;
 
-    expression = [ "+"|"-"] term { ("+"|"-") term} | "call" ident;
+    expression = ["+"|"-"] term {("+"|"-") term} | "call" ident;
 
-    term = factor {("*"|"/") factor};
+    term = ["~"] factor { ("*"|"/"|"&"|"|") ["~"] factor};
 
-    factor = ident | number | value | "(" expression ")";
+    factor = ident | value | "(" expression ")";
 ```

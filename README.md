@@ -1,7 +1,6 @@
 # FJP semestral
 - supposed theme: PL/0 compiler with simple IDE in JS/ web
 - the first draft grammar seems too simple - can it work? should it include various types?
-- TODO: calling a procedure with params example is wrong (doesn't take the parameters)
 
 TURN-IN CHECKLIST:
 - integer:
@@ -16,30 +15,34 @@ TURN-IN CHECKLIST:
     - [x] \>
     - [x] \>=
 - float:
-    - [ ] \+
-    - [ ] \-
-    - [ ] \*
-    - [ ] /
-    - [ ] =
-    - [ ] \#
-    - [ ] <
-    - [ ] <=
-    - [ ] \>
-    - [ ] \>=
+    - [x] \+
+    - [x] \-
+    - [x] \*
+    - [x] /     - only works "somewhat" (it seems periodic numbers don't work e.g.: 1/3)
+    - [x] =
+    - [x] \#
+    - [x] <
+    - [x] <=
+    - [x] \>
+    - [x] \>=
 - boolean:
-    - [ ] =
-    - [ ] \#
-- string:
+    - [x] ~
+    - [x] &
+    - [x] |
+    - [x] =
+    - [x] \#
+- string: --- CANCELED
     - [ ] \+
     - [ ] =
     - [ ] \#
 - [x] if
 - [x] else
 - [x] while
-- [ ] for
-- [ ] return value
-- [ ] multiple assignment
-- [ ] expression priority with ()
+- [x] for
+- [x] return value - tested integer only (TODO: test other data types)
+- [ ] multiple assignment --- CANCELED
+- [x] parallel assignment
+- [x] expression priority with - tried with booleans, seems to work (TODO: test other data types)
 - [ ] parameters? (not even done)
-- [ ] ternary? (not even done - doesn't have much use)
+- [x] ternary - its useless, cannot be used to assign values to variables... basically if with different syntax
 - [x] AND, OR, NEG (in some basic form)

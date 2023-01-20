@@ -84,6 +84,41 @@ const Instructions = {
 }
 
 // https://usermanual.wiki/Pdf/PL020Users20Manual.15518986/help
+// const OPR = {
+//     return:             0,
+//     negation:           1,
+//     addition:           2,
+//     subtraction:        3,
+//     multiplication:     4,
+//     division:           5,
+//     odd:                6,
+//     modulo:             7,
+//     equality:           8,
+//     inequality:         9,
+//     less_than:          10,
+//     less_then_equal:    11,
+//     greater_than:       12,
+//     greater_than_equal: 13,
+// }
+
+// KIV/FJP inerpret operations
+// export enum OperationType {
+//     U_MINUS = 1,
+//     ADD = 2,
+//     SUB = 3,
+//     MULT = 4,
+//     DIV = 5,
+//     MOD = 6,
+//     IS_ODD = 7,
+//     EQ = 8,
+//     N_EQ = 9,
+//     LESS_THAN = 10,
+//     MORE_EQ_THAN = 11,
+//     MORE_THAN = 12,
+//     LESS_EQ_THAN = 13,
+// }
+
+// operations according to the online interpret for KIV/FJP (some operations are under different number)
 const OPR = {
     return:             0,
     negation:           1,
@@ -96,13 +131,35 @@ const OPR = {
     equality:           8,
     inequality:         9,
     less_than:          10,
-    less_then_equal:    11,
+    less_then_equal:    13, // WARNING: changed compared to manual
     greater_than:       12,
-    greater_than_equal: 13,
+    greater_than_equal: 11, // WARNING: changed compared to manual
 }
 
+const dtype_operations = new Map();
+dtype_operations.set(Symbols_Input_Type.integer, [Symbols.plus, Symbols.minus, Symbols.star, Symbols.slash, Symbols.eq, 
+                                                  Symbols.hash_mark, Symbols.less_than, Symbols.less_then_equal, 
+                                                  Symbols.greater_than, Symbols.greater_than_equal]);
+dtype_operations.set(Symbols_Input_Type.float,   [Symbols.plus, Symbols.minus, Symbols.star, Symbols.slash, Symbols.eq, 
+                                                  Symbols.hash_mark, Symbols.less_than, Symbols.less_then_equal, 
+                                                  Symbols.greater_than, Symbols.greater_than_equal]);
+dtype_operations.set(Symbols_Input_Type.boolean, [Symbols.eq, Symbols.hash_mark, Symbols.tilde, Symbols.ampersand, 
+                                                  Symbols.pipe]);
+dtype_operations.set(Symbols_Input_Type.string,  [Symbols.eq, Symbols.hash_mark, Symbols.plus]);
 
-// TODO: this would be nice to have it private - only accessible through functions
+function has_type_action(type, action) {
+    if (dtype_operations.has(type)) {
+        if (dtype_operations.get(type).indexOf(action) >= 0)
+            return true;
+
+        this.error("Type: " + type +" does not support action: " + action);
+    } else {
+        this.error("Cannot verify action for type: " + type + ". This type does not exist.");
+    }
+
+    return false;
+}
+
 let instruction_list = [];
 
 function push_instruction(inst = Instructions.ERR, par1 = -1, par2 = -1) {
@@ -113,7 +170,12 @@ function push_instruction(inst = Instructions.ERR, par1 = -1, par2 = -1) {
     }
 
     instruction_list.push({inst, par1, par2});
-};
+}
+
+function push_instruction_and_return(inst = Instructions.ERR, par1 = -1, par2 = -1) {
+    push_instruction(inst, par1, par2);
+    return instruction_list[instruction_list.length - 1];
+}
 
 function push_instruction_to_start(inst = Instructions.ERR, par1 = -1, par2 = -1) {
     if (inst === Instructions.ERR) {
@@ -122,7 +184,7 @@ function push_instruction_to_start(inst = Instructions.ERR, par1 = -1, par2 = -1
     }
 
     instruction_list.unshift({inst, par1, par2});
-};
+}
 
 function print_instruction_list() {
     let textArea = document.getElementById("editor-out");
@@ -152,22 +214,23 @@ let recursive_descent = (function() {
     }
 
     let descent = ({
-        SB_DB_PC: 3,
+        SB_DB_PC_RV: 4, // basic registers (static base, dynamic base, program counter) + newly added Return Value
+        main_context_name: "main",
         symbol: null,
         last_symbol_value: null,
         symbol_value: null,
         symbol_counter: 0, // increases when lexer parses symbol - can be used to underline syntax errors (should correspond to error word)
         compilationErrors: [],
 
-        // constants: [],
-        // variables: [],
+        // variables and context_list represent symbol table
         // array of arrays for constants and variables in a scope - every inner array is one scope of a level (index should correspons to level)
         variables: [],
-        // context_list: new Object(), // wanted it as a map, but array will have to do
         context_list: [],
 
         level_counter: 0,
-        expr_left_type: Symbols_Input_Type.ERR, // expressions validate data type against this - based on left side data type
+        for_nest_counter: 0, // holds total number of nested if
+        for_var_count: 0, // increses/ decreses when entering/ leaving for loop
+        ternary_return_flag: false,
     
         /**
          * Loads next symbol from lexer (tokenizer) into symbol variable. 
@@ -199,7 +262,6 @@ let recursive_descent = (function() {
                 // probably should do symbol_counter++; for correct highlighting
             }
     
-            // TODO tokenizer.EOF = 1 - this might cause trouble when parsing number "1" ?
             if (this.symbol === tokenizer.EOF)
                 this.symbol = Symbols.EOF; // EOF should throw error anywhere in recursive_descent - MUST NOT BE PART OF GRAMMAR
         },
@@ -233,20 +295,38 @@ let recursive_descent = (function() {
                 this.condition_expression_inner();
 
                 if (is_true_on_and) {
-                    push_instruction(Instructions.OPR, 0, OPR.addition); // cond1 + cond2
-                    push_instruction(Instructions.LIT, 0, 2); // push 2
-                    push_instruction(Instructions.OPR, 0, OPR.equality);
+                    this.logical_and_inst();
                 } else {
-                    push_instruction(Instructions.OPR, 0, OPR.addition); // cond1 + cond2
-                    push_instruction(Instructions.LIT, 0, 0); // push 2
-                    push_instruction(Instructions.OPR, 0, OPR.inequality); // if not equal to 0, then either (or both) conditions is true - 1 pushed to stack
+                    this.logical_or_inst();
                 }
             }
 
             return true;
         },
 
-        negate_condtion_inst: function() {
+        /** 
+         * Takes two values at the top of the stack and adds them together. Expects boolean values at the stack (1/0).
+         * Then pushes 2 and call operation equality - this consumes 2 values and pushes "1" if the values equal 2
+         * => both values were one, so both were true. Pushes "0" otherwise.
+         */
+        logical_and_inst: function() {
+            push_instruction(Instructions.OPR, 0, OPR.addition); // cond1 + cond2
+            push_instruction(Instructions.LIT, 0, 2); // push 2
+            push_instruction(Instructions.OPR, 0, OPR.equality);
+        },
+
+        /**
+         * Takes two values at the top of the stack and adds them together. Expects boolean values at the stack (1/0).
+         * Then pushes 0 and call operation IN-equality - this consumes 2 values and pushes "1" if the sum does not
+         * equal 0, pushes "0" if the sum is 0 => atleast one value has to be true.
+         */
+        logical_or_inst: function() {
+            push_instruction(Instructions.OPR, 0, OPR.addition); // cond1 + cond2
+            push_instruction(Instructions.LIT, 0, 0); // push 2
+            push_instruction(Instructions.OPR, 0, OPR.inequality); // if not equal to 0, then either (or both) conditions is true - 1 pushed to stack
+        },
+
+        negate_condition_inst: function() {
             // result of condition (comparison operator) can only be 1/0
             // (res + 1) % 2 = new_res - should invert truth value
             push_instruction(Instructions.LIT, 0, 1);
@@ -268,7 +348,7 @@ let recursive_descent = (function() {
 
             // result of the condition is on stack
             if (negate_cond) {
-                this.negate_condtion_inst();
+                this.negate_condition_inst();
             }
         },
 
@@ -336,7 +416,7 @@ let recursive_descent = (function() {
                 }
 
                 // strings and booleans can only be compared for equality/ inequality
-                if (op_number >= OPR.inequality && 
+                if (op_number > OPR.inequality && 
                     (expr_type == Symbols_Input_Type.string || expr_type == Symbols_Input_Type.boolean)) 
                 {
                     this.error("Condition cannot be evaluated. Strings and boolean can only be " + 
@@ -345,12 +425,11 @@ let recursive_descent = (function() {
                 }
 
                 switch (expr_type) {
-                    case Symbols_Input_Type.boolean:
-                        // TODO: custom boolean comparison
-                        break;
                     case Symbols_Input_Type.string:
                         // TODO: cutom string comparions
-                        break;
+                        this.error("Operation with strings is not supported at the moment.");
+                        return false;
+                    case Symbols_Input_Type.boolean: // boolean is represented as 1/0 - same operations as int
                     case Symbols_Input_Type.integer:
                     case Symbols_Input_Type.float:
                     default:
@@ -367,11 +446,16 @@ let recursive_descent = (function() {
 
         expression: function() {
             // expression can be "result" of call, however to use statement_call, we must verify the "call" symbol
-            if (this.symbol == Symbols.call)
-                if (this.statement_call()) {
-                    return true;
-                    // TODO: get return data type from procedure and verify if the data type is correct + save the value from return statement
+            if (this.symbol == Symbols.call) {
+                let return_type;
+
+                if ((return_type = this.statement_call())) {
+                    push_instruction(Instructions.LOD, 0, 3); // load RV after call - for further work with it
+                    // caller should verify, if the data type is correct
+                    return return_type;
                 }
+            }
+                
 
             // if the expression isn't call, then do normal expression
             let negate = false;
@@ -427,7 +511,8 @@ let recursive_descent = (function() {
                             break;
                         case Symbols_Input_Type.string:
                             // TODO: string concat operations
-                            break;
+                            this.error("Operation with strings is not supported at the moment.");
+                            return false;
                         default:
                             this.error("'Expression' failed because type: " + term_type + " does not support addtion.");
                             return false;
@@ -445,42 +530,86 @@ let recursive_descent = (function() {
         },
 
         term: function() {
+            let inner_type;
+
+            if ((inner_type = this.term_inner()) === false) {
+                this.error("Failed to compile term.");
+                return false;
+            }
+
+            let loop_inner_type;
+            let operation;
+
+            while (this.accept(Symbols.star) || this.accept(Symbols.slash) || 
+                   this.accept(Symbols.ampersand) || this.accept(Symbols.pipe)) 
+            {
+                operation = this.last_symbol_value; // JS can work with this as if it was Symbol, altough its string (lexer yytext)
+                
+                if ((loop_inner_type = this.term_inner()) === false) {
+                    this.error("Failed to compile additional term.");
+                    return false;
+                }
+
+                if (inner_type != loop_inner_type) {
+                    this.error("'Term' factors have different data type!" + 
+                        " Operations *,/,&,| can only be used on the same data type.");
+                    return false;
+                }
+
+                if (!has_type_action(inner_type, operation)) {
+                    this.error("'Term' error. Type: " + inner_type + " does not suppord operation: " + operation);
+                    return false;
+                }
+
+                switch (operation) {
+                    case Symbols.star:
+                    case Symbols.slash:
+                        push_instruction(Instructions.OPR, 0, operation);
+                        break;
+                    case Symbols.ampersand:
+                        // these instructions are used to take 2 boolean values on stack and combine it to AND result
+                        this.logical_and_inst();
+                        break;
+                    case Symbols.pipe:
+                        // these instructions are used to take 2 boolean values on stack and combine it to OR result
+                        this.logical_or_inst();
+                        break;
+                    default:
+                        this.error("Invalid 'term' operation!");
+                        return false;
+                }                
+            }
+
+            return inner_type;
+        },
+
+        term_inner: function() {
+            let negate = false;
+
+            if (this.accept(Symbols.tilde)) {
+                negate = true;
+            }
+
             let factor_type;
 
             // factor load/ prepares value to stack
             if ((factor_type = this.factor()) === false) {
-                this.error("'Term' (multiplication/ division expression) failed to obtain factor");
+                this.error("'Term' failed to obtain factor (identifier/ value)");
                 return false;
             }
 
-            let loop_factor_type;
-            let operation;
-
-            // same if as the loop below - if we go to the loop we need to verify, that the operation makes sense
-            if (this.symbol == Symbols.star || this.symbol == Symbols.slash)
-                if (factor_type == Symbols_Input_Type.string || factor_type == Symbols_Input_Type.boolean) {
-                    this.error("'Term' error. Cannot multiply or divide booleans or strings. Type error: " + 
-                        factor_type);
-                    return false;
-                }
-
-            while (this.accept(Symbols.star) || this.accept(Symbols.slash)) {
-                // already verified, that the operation is either * or /. Also must save operation before factor()
-                operation = this.last_symbol_value == Symbols.star ? OPR.multiplication : OPR.division; 
+            if (negate) {
+                if (!has_type_action(factor_type, Symbols.tilde))
+                    return false; // error printed by has_type_action
                 
-                if ((loop_factor_type = this.factor()) === false) {
-                    this.error("'Term' (multiplication/ division expression) failed to obtain additional factor");
+                if (factor_type == Symbols_Input_Type.boolean) {
+                    // altough the function name says "condition" the principle for inverting boolean is the same => condition is boolean
+                    this.negate_condition_inst();
+                } else {
+                    // this shouldn't occur, unless someone tries to add new data type to the dtype_operations map
+                    this.error("Negation '~' is only defined for booleans!");
                     return false;
                 }
-
-                if (factor_type != loop_factor_type) {
-                    this.error("'Term' (multiplication/ division expression) factors have different data type!" + 
-                        " Operations *,/ cannot be executed with incompatible data types");
-                    return false;
-                }
-
-                // another factor was loaded to stack, operation between 2 factors is now to be done and result will be on the stack
-                push_instruction(Instructions.OPR, 0, operation);
             }
 
             return factor_type;
@@ -495,7 +624,6 @@ let recursive_descent = (function() {
                     return false;
                 }
 
-                // TODO: this will be useless with recursion - for that dynamic level counter would be needed
                 push_instruction(Instructions.LOD, Math.abs(v.level - this.level_counter), v.position);
                 return v.type;
             } else if (this.accept(Symbols.input)) {
@@ -506,13 +634,13 @@ let recursive_descent = (function() {
                         break;
                     case Symbols_Input_Type.string:
                         {
+                            this.error("Operation with strings is not supported at the moment.");
                             // TODO: create string function - function that pushes the string to the memory and returns its address
-                            push_instruction(Instructions.LIT, 0, 123); // address from string init
-                            break;
+                            // push_instruction(Instructions.LIT, 0, 123); // address from string init
+                            return false;
                         }
                     case Symbols_Input_Type.float:
                     case Symbols_Input_Type.integer:
-                        // push_instruction(Instructions.LIT, 0, this.last_symbol_value);
                         // NOTE: praseFloat should return integer value, if the value doesn't have decimal part
                         push_instruction(Instructions.LIT, 0, parseFloat(this.last_symbol_value));
                         break;
@@ -553,7 +681,7 @@ let recursive_descent = (function() {
                     }
                     break;
                 case Symbols.call:
-                    if (!this.statement_call()) {
+                    if (this.statement_call() === false) {
                         return false;
                     }
                     break;
@@ -578,7 +706,7 @@ let recursive_descent = (function() {
                     }
                     break;
                 case Symbols.open_bra:
-                    if (!this.statement_open_bra()) { // TODO: this needs instructions
+                    if (!this.statement_open_bra()) {
                         return false;
                     }
                     break;
@@ -612,8 +740,7 @@ let recursive_descent = (function() {
                     return false;
             }
 
-            // TODO: if this is here, it only consumes the first command in a block (= scope)
-            this.accept(Symbols.semicolon); // statement can (but doesn't have to be) ended with ';'
+            this.accept(Symbols.semicolon); // statement can (but doesn't have to be) ended with ';' (no if)
 
             return true;
         },
@@ -630,7 +757,7 @@ let recursive_descent = (function() {
                         return false; // failed parsing
                         
                     // consts.push(var_obj);
-                    var_obj.position = this.SB_DB_PC + vars.length;
+                    var_obj.position = this.SB_DB_PC_RV + vars.length;
                     var_obj.level = this.level_counter;
                     vars.push(var_obj);
                 } while (this.accept(Symbols.comma));
@@ -648,7 +775,7 @@ let recursive_descent = (function() {
                     if ((var_obj = this.load_ident_and_type()) === false) 
                         return false; // failed parsing 
 
-                    var_obj.position = this.SB_DB_PC + vars.length;
+                    var_obj.position = this.SB_DB_PC_RV + vars.length;
                     var_obj.level = this.level_counter;
                     vars.push(var_obj);
                 } while (this.accept(Symbols.comma));
@@ -662,7 +789,7 @@ let recursive_descent = (function() {
 
             // must push vars before procedures, so we can use them in procs
             // let var_index = this.variables.length; // maybe for verification that we are later popping correct stack
-            if (vars.length > 0)
+            // if (vars.length > 0)
                 this.variables.push(vars);
 
             let pp_count = 0; // procedure-param count
@@ -678,47 +805,67 @@ let recursive_descent = (function() {
             let block_start = instruction_list.length;
 
             // alloc space for variables in current stack frame
-            push_instruction(Instructions.INT, 0, this.SB_DB_PC + pp_count + vars.length);
+            let stac_alloc_inst = push_instruction_and_return(Instructions.INT, 0, 0);
 
             // initialize constant values
-            vars.forEach(function (val, i) {
+            for (let i = 0; i < vars.length; i++) {
+                let val = vars[i];
                 if (val.constant) {
-                    // TODO: linting suggest val.value is problematic, but i dont know why
                     if (val.value == undefined || val.value == null) {
                         this.error("Failed to generate constant initialization instructions. Constant: " + 
                             val.name + " does not have a value!");
                         return false;
                     }
-                    push_instruction(Instructions.LIT, 0, val.value);
+
+                    switch (val.type) {
+                        case Symbols_Input_Type.boolean:
+                            push_instruction(Instructions.LIT, 0, this.get_boolean_as_int(val.value));
+                            break;
+                        // other types (float, string, integer) use raw value (string is a pointer to heap = integer)
+                        default:
+                            push_instruction(Instructions.LIT, 0, val.value);
+                    }
+                    
                     // push_instruction(Instructions.STO, val.level, val.position);
                     // level is always 0, because we are initing constants for current scope (each scope inits its own constants)
                     push_instruction(Instructions.STO, 0, val.position);
                 }
-            })
+            }
 
-            // TODO: set PC
             if (!this.statement()) {
                 // print some error? - statement compiling will print errors on where it failed
                 return false;
             }
 
             // pop variables of this context, only if there are any
-            if (vars.length > 0)
+            // if (vars.length > 0)
                 this.variables.pop();
 
+            // setting stack frame allocation AFTER statements, because statements can require "dynamic" number of variables
+            stac_alloc_inst.par2 = this.SB_DB_PC_RV + pp_count + vars.length + this.for_var_count;
+
+            this.for_var_count = 0;
+
+            // TODO: this is doubled, when return is last statement (= unreachable - small optimalization = low prio)
             push_instruction(Instructions.RET, 0, 0);
 
             return block_start;
         },
     
         program: function() {
+            // reset recursive descent flags
             this.compilationErrors = []; //Empty the errors ftom previous iterations
+            this.variables = [];
             this.context_list = [];
             instruction_list = []; // empty instruction list (global)
+            this.level_counter = 0;
+            this.for_nest_counter = 0;
+            this.for_var_count = 0;
+            this.ternary_return_flag = false;
 
             this.next_sym();
 
-            let main_context = this.push_context("main", -1); // TODO main block name constant?
+            let main_context = this.push_context(this.main_context_name, -1);
             let block_start = 0;
             if ((block_start = this.block()) === false)
                 return this.compilationErrors; // failed to parse the body of the program - dot won't be reached by tokenizer (lexer)
@@ -753,7 +900,6 @@ let recursive_descent = (function() {
          */
         push_context: function(c_name, c_address, c_return_type = null) {
             console.log("adding context: " + c_name);
-            // TODO: not doing error checking - is that ok? - only used privately anyway
             this.context_list.push({c_name, c_address, c_return_type});
             return this.context_list[this.context_list.length - 1];
         },
@@ -833,7 +979,6 @@ let recursive_descent = (function() {
 
             ident_name = this.last_symbol_value; // name is valid identifier
 
-            // TODO: test if this works, this will most likely not work correctly
             // [: data_type]
             if (this.accept(Symbols.colon))
                 // lexer validates type
@@ -844,48 +989,6 @@ let recursive_descent = (function() {
                     data_type = Symbols_Input_Type[this.last_symbol_value]; 
 
             return [ident_name, data_type];
-        },
-
-        /**
-         * Validates if value is valid data type and determines it. Also validates against expected data type.
-         * @param {*} value that is validated or resolved.
-         * @param {*} expected_dtype can be null. Expected data type of the value
-         * @returns Symbols_Input_Type value on success. "false" otherwise.
-         */
-        validate_value_and_type: function(value, expected_dtype) {
-            // TODO: if this is to be used it must be fixed, because lexer always returns string and typeof doesn't work on it
-
-            switch (typeof value) {
-                case "number":
-                    {
-                        if (!isNaN(value)) return false;
-                        // value type doesn't match expected data type
-                        if (expected_dtype != null && 
-                            (expected_dtype[1] != Symbols_Input_Type["integer"] || expected_dtype[1] != Symbols_Input_Type["float"]))
-                        {
-                            this.error("Data type mismatch. Recieved number (int/ float), but declaration expects: " + expected_dtype);
-                            return false;
-                        }
-                        
-                        return Number.isInteger(value) ? Symbols_Input_Type["integer"] : Symbols_Input_Type["float"];
-                    }
-                case "string":
-                    {
-                        // typeof validates that the value is string
-                        if (expected_dtype != null && expected_dtype != Symbols_Input_Type["string"]) return false;
-                        return Symbols_Input_Type["string"];
-                    }
-                case "boolean":
-                    {
-                        // typeof validates that the value is true/ false
-                        if (expected_dtype != null && expected_dtype != Symbols_Input_Type["boolean"]) return false;
-                        return Symbols_Input_Type["boolean"];
-                    }
-                default:
-                    this.error("Unrecognized data type. Supported data types are: integer, float, string");
-            }
-
-            return false;
         },
 
         validate_last_type_to_expected: function(expected_dtype) {
@@ -910,7 +1013,6 @@ let recursive_descent = (function() {
                 }
 
             // at this point everything should be validated - returning variable object
-            // TODO - level and position - variable(name, type, level, position); -- might be unnecessary
             return make_var(name_and_type[0], name_and_type[1]);
         },
     
@@ -938,45 +1040,11 @@ let recursive_descent = (function() {
                 this.error("Failed to validate value.");
                 return false;
             }
-            // if (this.validate_value_and_type(this.last_symbol_value, var_obj.type) === false) {
-            //     this.error("Failed to validate value.");
-            //     return false;
-            // }
 
-            var_obj.value = this.last_symbol_value; // TODO: parse last_symbol_value as value of type?
+            var_obj.value = this.last_symbol_value;
             var_obj.constant = true;
 
             return var_obj;
-
-            // // this will be array of [name, data_type], where data_type can be null
-            // let name_and_type = this.block_ident_declaration();
-
-            // // stop parsing if error occured - printing error is handled by block_ident_declaration
-            // if (name_and_type[0] == null)
-            //     return false;
-
-            // // =
-            // if (!this.accept(Symbols.eq)) {
-            //     this.error("Expected '=' symbol but received: " + this.last_symbol_value);
-            //     return false;
-            // }
-
-            // // TODO: this works differently now
-            // // value - can be either input (string, maybe something more?) or number (both int and float)
-            // if (!(this.accept(Symbols.input) || this.accept(Symbols.number))) {
-            //     this.error("Following value is invalid: " + this.last_symbol_value);
-            //     return false;
-            // }
-
-            // let type = this.validate_value_and_type(this.last_symbol_value, name_and_type[1]);
-            // if (type === false) {
-            //     // error should already be printed by validate_value_and_type
-            //     return false;
-            // }
-
-            // // at this point everything should be validated - returning constant
-            // // TODO - level and position 
-            // return variable(name_and_type[0], type);
         },
 
         block_procedure: function() {
@@ -986,6 +1054,15 @@ let recursive_descent = (function() {
             // increase level counter, because we are now "deeper"
             this.level_counter++;
 
+            let return_type;
+            if (this.accept(Symbols.data_type)) {
+                return_type = Symbols_Input_Type[this.last_symbol_value];
+                if (return_type == undefined) {
+                    this.error("Failed to determine return type of procedure. Value: " + this.last_symbol_value);
+                    return -1;
+                }
+            }
+
             // ident
             if (!this.accept(Symbols.ident)) {
                 this.error("Following identifier is invalid: " + this.last_symbol_value);
@@ -993,11 +1070,6 @@ let recursive_descent = (function() {
             }
 
             ident_name = this.last_symbol_value; // name is valid identifier
-
-            let return_type;
-            if (this.accept(Symbols.data_type)) {
-                return_type = Symbols_Input_Type[this.last_symbol_value];
-            }
 
             // check if context name is available
             if (this.get_context_by_name(ident_name) != null) {
@@ -1020,8 +1092,7 @@ let recursive_descent = (function() {
                 
                 // ;
                 if (!this.accept(Symbols.close_bra)) {
-                    // TODO: see if tokenizer can provide line number for this error (it should)
-                    this.error("Procedure paramater declaration MUST BE closed by ')'");
+                    this.error("Procedure paramater declaration must be closed by ')'");
                     return -1;
                 }
             }
@@ -1061,7 +1132,8 @@ let recursive_descent = (function() {
         statement_ident: function() {
             // simple version: ident := expression; // where ; is checked by caller
             // multiple assignments: ident := ident := ident := expression; // problem: ident can expression - how to determine when it ends?
-            // TODO: will have to add additional rule to the grammar
+            
+            // TODO: need grammar improvement for multiple assignment and ternary operator to be expression
 
             // first "ident" already verified by caller
             this.accept(Symbols.ident);
@@ -1079,39 +1151,20 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            if (!this.expression()) {
+            let expr_type;
+            if ((expr_type = this.expression()) === false) {
                 this.error("Assignment must end with a valid expression.");
+                return false;
+            }
+
+            if (variable.type != expr_type) {
+                this.error("Assignment failed. Left and right side type mismatch. Cannot store: " + 
+                    expr_type + "into: " + variable.type);
                 return false;
             }
 
             // expecting that expression result is at the top of the stack
             push_instruction(Instructions.STO, Math.abs(variable.level - this.level_counter), variable.position);
-
-            // := ident (indefinetly)
-            // do {
-            //     if (!this.accept(Symbols.assignment)) {
-            //         this.error("Statement expected assignment symbol. Statement: " + this.symbol_value);
-            //         return false;
-            //     }
-
-            //     if (!this.expression()) {
-            //         this.error("Assignment must end with a valid expression.");
-            //         return false;
-            //     }
-
-            //     // TODO should save idents to some list
-            // } while (this.accept(Symbols.ident));
-
-            // expression
-            // if (!this.expression()) {
-            //     this.error("Assignment must end with a valid expression.");
-            //     return false;
-            // }
-
-            // // reached end of statement
-            // if (!this.accept(Symbols.semicolon)) return false;
-
-            // TODO: instructions assigning expression result to all identifiers
 
             return true;
         },
@@ -1142,15 +1195,15 @@ let recursive_descent = (function() {
             } while (this.accept(Symbols.comma));
 
             // } := {
-            if (this.accept(Symbols.close_curl)) {
+            if (!this.accept(Symbols.close_curl)) {
                 this.error("Multiple assignment statement expects '}' to close identifier list.");
                 return false;
             }
-            if (this.accept(Symbols.assignment)) {
+            if (!this.accept(Symbols.assignment)) {
                 this.error("Multiple assignment statement expects assignment symbol.");
                 return false;
             }
-            if (this.accept(Symbols.open_curl)) {
+            if (!this.accept(Symbols.open_curl)) {
                 this.error("Multiple assignment statement expects '{' to open value list.");
                 return false;
             }
@@ -1158,14 +1211,28 @@ let recursive_descent = (function() {
             let i = 0;
             // value {, value}
             do {
+                if (ident_counter <= 0) {
+                    this.error("Too many values in parallel assignment!");
+                    return false;
+                }
+
                 if (!this.accept(Symbols.input)) {
                     this.error("Invalid value. This value is a keyword or is otherwise invalid. Value: " + this.symbol_value);
                     return false;
                 }
 
+                if (this.validate_last_type_to_expected(vars[i].type) === false) {
+                    this.error("Failed to validate value type. Variable type: " + vars[i].type + 
+                               ", value type: " + symbol_input_type);
+                    return false;
+                }
                 
-                // TODO: value type checking (after LINT refactor)
-                push_instruction(Instructions.LIT, 0, this.last_symbol_value);
+                // only boolean needs to be pushed differently... atleast for now
+                if (vars[i].type == Symbols_Input_Type.boolean)
+                    push_instruction(Instructions.LIT, 0, this.get_boolean_as_int(this.last_symbol_value));
+                else
+                    push_instruction(Instructions.LIT, 0, this.last_symbol_value);
+
                 push_instruction(Instructions.STO, vars[i].level, vars[i].position);
 
                 ident_counter--;
@@ -1174,6 +1241,12 @@ let recursive_descent = (function() {
 
             if (ident_counter != 0) {
                 this.error("Multiple assignment statement identifier count and value count do not match.");
+                return false;
+            }
+
+            // }
+            if (!this.accept(Symbols.close_curl)) {
+                this.error("Multiple assignment statement expects '}' to close value list.");
                 return false;
             }
 
@@ -1189,24 +1262,17 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // let context = this.get_context_by_name(this.last_symbol_value);
             let context_index = this.get_context_index_by_name(this.last_symbol_value);
-            let context = this.context_list[context_index];
-            // if (context_index < 0) {
-            if (context == null) {
+            if (context_index < 0) {
                 this.error("Call failed because identifier: " + this.last_symbol_value + " does not exist.");
                 return false;
-            }
-
-            // if context has return value, prepare stack cell for it
-            if (context.return_type != null) {
-                push_instruction(Instructions.INT, 0, 1);
             }
 
             // except for main - main is always index 0 and is first instruction of the program
             push_instruction(Instructions.CAL, 0, context_index);
             
-            return true;
+            let context = this.context_list[context_index];
+            return context.c_return_type;
         },
 
         statement_quest_mark: function() {
@@ -1218,7 +1284,7 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // TODO: what to do with this shit? We must have it, because it is original PL/0 grammar
+            // TODO: what to do with this sh*t? We must have it, because it is original PL/0 grammar
             
             return true;
         },
@@ -1232,7 +1298,7 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // TODO: what to do with this shit? We must have it, because it is original PL/0 grammar
+            // TODO: what to do with this sh*t? We must have it, because it is original PL/0 grammar
             
             return true;
         },
@@ -1292,7 +1358,7 @@ let recursive_descent = (function() {
                     return false;
                 }
 
-                jmp_over_else.par2 = instruction_list.length; // TODO: maybe -1 here?
+                jmp_over_else.par2 = instruction_list.length;
             }
 
             return true;
@@ -1301,6 +1367,8 @@ let recursive_descent = (function() {
         statement_open_bra: function() {
             // ( verified by caller
             this.accept(Symbols.open_bra);
+
+            this.ternary_return_flag = true;
 
             // condition
             if (!this.condition_expression()) {
@@ -1320,24 +1388,34 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // TODO: "internally 'return'"
+            let ternary_branch_jmp = push_instruction_and_return(Instructions.JMC, 0, 0);
+
             if (!this.statement()) {
-                this.error("First statement in the ternary operator failed to execute.");
+                this.error("First expression in the ternary operator failed to execute.");
                 return false;
             }
 
-            if (!this.accept(Symbols.quest_mark)) {
+            let jmp_over_negative = push_instruction_and_return(Instructions.JMP, 0, 0);
+            ternary_branch_jmp.par2 = instruction_list.length;
+
+            if (!this.accept(Symbols.colon)) {
                 this.error("Expected ':' to separate ternary statements. Received: " + this.symbol_value);
                 return false;
             }
 
-            // TODO: "internally 'return'"
             if (!this.statement()) {
                 this.error("Second statement in the ternary operator failed to execute.");
                 return false;
             }
 
-            // TODO: guess what, instructions
+            jmp_over_negative.par2 = instruction_list.length;
+
+            this.ternary_return_flag = false;
+
+            // register 3 (cell 4) is for any use - now primarily for return values
+            // push_instruction(Instructions.STO, 0, 3);
+
+            // what to do with RV now? this is a statement - how can we assing it
 
             return true;
         },
@@ -1367,7 +1445,7 @@ let recursive_descent = (function() {
             }
 
             push_instruction(Instructions.JMP, 0, while_start_addr);
-            while_end.par2 = instruction_list.length; // TODO: maybe -1 here?
+            while_end.par2 = instruction_list.length;
 
             return true;
         },
@@ -1376,7 +1454,13 @@ let recursive_descent = (function() {
             // for verified by caller
             this.accept(Symbols.for);
 
-            let double_inst_start = instruction_list.length;
+            this.for_nest_counter++;
+            if (this.for_nest_counter > this.for_var_count)
+                this.for_var_count = this.for_nest_counter;
+
+            // control variable position (must be -1)
+            let cv_position = this.SB_DB_PC_RV + this.variables[this.variables.length - 1].length + 
+                              this.for_nest_counter - 1;
 
             if (this.expression() != Symbols_Input_Type.integer) {
                 this.error("Failed to parse starting point of for loop.");
@@ -1394,30 +1478,27 @@ let recursive_descent = (function() {
             }
 
             // === prepare control var
-            push_instruction(Instructions.OPR, 0, 3); // expr2 - expr1 = iteration count
-            
-            let double_inst_end = instruction_list.length;
-            // double all instruction in this statement up until this point
-            // reason: we need the diff of expression twice - once for comparison and once for actual iteration
-            for (let i = double_inst_start; i < double_inst_end; i++) {
-                instruction_list.push(Object.assign({}, instruction_list[i]));
-            }
-
+            push_instruction(Instructions.OPR, 0, 3); // expr1 - expr2 = iteration count
+            push_instruction(Instructions.STO, 0, cv_position);
+            push_instruction(Instructions.LOD, 0, cv_position);
             push_instruction(Instructions.LIT, 0, 0); // push 0 to top of the stack
-            push_instruction(Instructions.OPR, 0, 10); // test: it_count < 0
-            push_instruction(Instructions.JMC, 0, 0); // expr2 - expr1 = iteration count
-            let it_count_absolute = instruction_list.length;
-            push_instruction(Instructions.OPR, 0, 1); // negate value (it_coutn) if its < 0 (making it positive)
-            it_count_absolute.par2 = instruction_list.length;
+            push_instruction(Instructions.OPR, 0, OPR.less_than); // test: it_count < 0
+            let negate_cv_jump = push_instruction_and_return(Instructions.JMC, 0, 0); // expr2 - expr1 = iteration count
+            push_instruction(Instructions.LOD, 0, cv_position);
+            push_instruction(Instructions.OPR, 0, OPR.negation); // negate value (it_coutn) if its < 0 (making it positive)
+            push_instruction(Instructions.STO, 0, cv_position);
+            negate_cv_jump.par2 = instruction_list.length;
 
-            // === start for
+            // === for
             let for_start = instruction_list.length;
-            push_instruction(Instructions.LIT, 0, 1); // push 1 to top of the stack
-            push_instruction(Instructions.OPR, 0, 3); // decrement control variable
-            push_instruction(Instructions.LIT, 0, 0); // push 0 to top of the stack
-            push_instruction(Instructions.OPR, 0, 12); // is control_var > 0 (or 13 for >=)
-            push_instruction(Instructions.JMC, 0, 0);
-            let for_end = instruction_list[instruction_list.length - 1];
+            push_instruction(Instructions.LOD, 0, cv_position);
+            push_instruction(Instructions.LIT, 0, 1);
+            push_instruction(Instructions.OPR, 0, OPR.subtraction);
+            push_instruction(Instructions.STO, 0, cv_position);
+            push_instruction(Instructions.LOD, 0, cv_position);
+            push_instruction(Instructions.LIT, 0, 0);
+            push_instruction(Instructions.OPR, 0, OPR.greater_than_equal); // doing equal for 1 more it. -> 3-8 = |5| not |4|
+            let for_jump_instruction = push_instruction_and_return(Instructions.JMC, 0, 0);
 
             if (!this.accept(Symbols.do)) {
                 this.error("Expected 'do' before for statement.");
@@ -1429,12 +1510,9 @@ let recursive_descent = (function() {
             }
 
             push_instruction(Instructions.JMP, 0, for_start);
-            for_end.par2 = instruction_list.length; // TODO: maybe -1 here?
+            for_jump_instruction.par2 = instruction_list.length;
 
-            // clean control var from stack
-            push_instruction(Instructions.JMP, 0, for_start);
-            push_instruction(Instructions.INT, 0, -1);
-            push_instruction(Instructions.JMP, 0, instruction_list.length); // TODO: maybe -1 here?
+            this.for_nest_counter--;
 
             return true;
         },
@@ -1448,13 +1526,17 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // expression result is now on top of the stack, "call" prepared a cell on level above to store this value
-            // PST takes: value, address, level | <-- top of the stack
-            push_instruction(Instructions.LOD, 0, 2); // loads PC (next instruction after RET)
-            push_instruction(Instructions.LIT, 0, 1);
-            push_instruction(Instructions.OPR, 0, 3); // subtraction - (PC-1) is the adress of the preprepared cell
-            push_instruction(Instructions.LIT, 0, 1); // level - always only 1 above current context
-            push_instruction(Instructions.PST, 0, 0);
+            if (this.ternary_return_flag) {
+                // if its ternary, save value to current context RV and push the value to stack
+                // register 3 (cell 4) is for any use - now primarily for return values
+                push_instruction(Instructions.STO, 0, 3);
+                push_instruction(Instructions.LOD, 0, 3);
+            } else {
+                // if its not ternary, save value to caller RV and return
+                // register 3 (cell 4) is for any use - now primarily for return values
+                push_instruction(Instructions.STO, 1, 3);
+                push_instruction(Instructions.RET, 0, 0);
+            }
 
             return true;
         },

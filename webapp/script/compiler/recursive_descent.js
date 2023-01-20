@@ -407,11 +407,16 @@ let recursive_descent = (function() {
 
         expression: function() {
             // expression can be "result" of call, however to use statement_call, we must verify the "call" symbol
-            if (this.symbol == Symbols.call)
-                if (this.statement_call()) {
-                    return true;
-                    // TODO: get return data type from procedure and verify if the data type is correct + save the value from return statement
+            if (this.symbol == Symbols.call) {
+                let return_type;
+
+                if ((return_type = this.statement_call())) {
+                    push_instruction(Instructions.LOD, 0, 3); // load RV after call - for further work with it
+                    // caller should verify, if the data type is correct
+                    return return_type;
                 }
+            }
+                
 
             // if the expression isn't call, then do normal expression
             let negate = false;
@@ -593,7 +598,7 @@ let recursive_descent = (function() {
                     }
                     break;
                 case Symbols.call:
-                    if (!this.statement_call()) {
+                    if (this.statement_call() === false) {
                         return false;
                     }
                     break;
@@ -753,6 +758,7 @@ let recursive_descent = (function() {
 
             this.for_var_count = 0;
 
+            // TODO: this is doubled, when return is last statement
             push_instruction(Instructions.RET, 0, 0);
 
             return block_start;
@@ -1033,6 +1039,15 @@ let recursive_descent = (function() {
             // increase level counter, because we are now "deeper"
             this.level_counter++;
 
+            let return_type;
+            if (this.accept(Symbols.data_type)) {
+                return_type = Symbols_Input_Type[this.last_symbol_value];
+                if (return_type == undefined) {
+                    this.error("Failed to determine return type of procedure. Value: " + this.last_symbol_value);
+                    return -1;
+                }
+            }
+
             // ident
             if (!this.accept(Symbols.ident)) {
                 this.error("Following identifier is invalid: " + this.last_symbol_value);
@@ -1040,11 +1055,6 @@ let recursive_descent = (function() {
             }
 
             ident_name = this.last_symbol_value; // name is valid identifier
-
-            let return_type;
-            if (this.accept(Symbols.data_type)) {
-                return_type = Symbols_Input_Type[this.last_symbol_value];
-            }
 
             // check if context name is available
             if (this.get_context_by_name(ident_name) != null) {
@@ -1243,24 +1253,17 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // let context = this.get_context_by_name(this.last_symbol_value);
             let context_index = this.get_context_index_by_name(this.last_symbol_value);
-            let context = this.context_list[context_index];
-            // if (context_index < 0) {
-            if (context == null) {
+            if (context_index < 0) {
                 this.error("Call failed because identifier: " + this.last_symbol_value + " does not exist.");
                 return false;
-            }
-
-            // if context has return value, prepare stack cell for it
-            if (context.return_type != null) {
-                push_instruction(Instructions.INT, 0, 1);
             }
 
             // except for main - main is always index 0 and is first instruction of the program
             push_instruction(Instructions.CAL, 0, context_index);
             
-            return true;
+            let context = this.context_list[context_index];
+            return context.c_return_type;
         },
 
         statement_quest_mark: function() {
@@ -1502,13 +1505,9 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // expression result is now on top of the stack, "call" prepared a cell on level above to store this value
-            // PST takes: value, address, level | <-- top of the stack
-            push_instruction(Instructions.LOD, 0, 2); // loads PC (next instruction after RET)
-            push_instruction(Instructions.LIT, 0, 1);
-            push_instruction(Instructions.OPR, 0, 3); // subtraction - (PC-1) is the adress of the preprepared cell
-            push_instruction(Instructions.LIT, 0, 1); // level - always only 1 above current context
-            push_instruction(Instructions.PST, 0, 0);
+            // register 3 (cell 4) is for any use - now primarily for return values
+            push_instruction(Instructions.STO, 1, 3);
+            push_instruction(Instructions.RET, 0, 0);
 
             return true;
         },

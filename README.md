@@ -16,16 +16,16 @@ TURN-IN CHECKLIST:
     - [x] \>
     - [x] \>=
 - float:
-    - [ ] \+
-    - [ ] \-
-    - [ ] \*
-    - [ ] /
-    - [ ] =
-    - [ ] \#
-    - [ ] <
-    - [ ] <=
-    - [ ] \>
-    - [ ] \>=
+    - [x] \+
+    - [x] \-
+    - [x] \*
+    - [x] /     - only works "somewhat" (it seems periodic numbers don't work e.g.: 1/3)
+    - [x] =
+    - [x] \#
+    - [x] <
+    - [x] <=
+    - [x] \>
+    - [x] \>=
 - boolean:
     - [ ] =
     - [ ] \#
@@ -36,8 +36,8 @@ TURN-IN CHECKLIST:
 - [x] if
 - [x] else
 - [x] while
-- [ ] for
-- [ ] return value
+- [x] for
+- [x] return value - tested integer only (TODO: test other data types)
 - [ ] multiple assignment
 - [ ] expression priority with ()
 - [ ] parameters? (not even done)

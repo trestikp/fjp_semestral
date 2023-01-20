@@ -212,7 +212,7 @@ const DEBUGGER_IP = "http://localhost:3000";
      * Primary function to read the content of the input window, use tokenizer and recursive descent
      * to parse the code and print it to the output.
      */
-    Parser.parse = function(validateOnly = false, input = null) {
+    Parser.parse = function(validateOnly = false, input = null, returnErrors = false) {
         if (!validateOnly) {
             Parser.writeToTerm("Compiling the program..");
         }
@@ -232,6 +232,10 @@ const DEBUGGER_IP = "http://localhost:3000";
             
             monaco.editor.setModelMarkers(editor.getModel(), "owner", []); //Remove markers
         } else {
+            if (returnErrors) {
+                return lastErrors;
+            } 
+            
             prepareErrors(validateOnly);
         }
     }

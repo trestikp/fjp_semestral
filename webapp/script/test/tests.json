@@ -5,5 +5,10 @@
     "ifElse.js",
     "intArithmetics.js",
     "intConditions.js",
-    "loop.js"
+    "loop.js",
+    "negative/invalidKeyName.js",
+    "negative/notDeclaredVariable.js",
+    "negative/missingEndDot.js",
+    "negative/unknownOperator.js",
+    "negative/missingSemicolon.js"
 ]

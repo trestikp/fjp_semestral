@@ -418,7 +418,7 @@ let recursive_descent = (function() {
                 }
 
                 // strings and booleans can only be compared for equality/ inequality
-                if (op_number >= OPR.inequality && 
+                if (op_number > OPR.inequality && 
                     (expr_type == Symbols_Input_Type.string || expr_type == Symbols_Input_Type.boolean)) 
                 {
                     this.error("Condition cannot be evaluated. Strings and boolean can only be " + 

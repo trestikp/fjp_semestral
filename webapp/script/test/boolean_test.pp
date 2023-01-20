@@ -1,5 +1,40 @@
 const t: boolean = true, tt: boolean = true, f: boolean = false, ff: boolean = false;
-var res1, res2, res3, res4;
+var res0p, res0n, res1, res2, res3, res4;
+
+procedure ineqAndEq;
+    begin
+        if t = t    then res0p := res0p + 1;
+        if t = tt   then res0p := res0p + 10;
+        if t = f    then res0p := res0p + 100;
+        if t = true then res0p := res0p + 1000;
+
+        if f = f     then res0p := res0p + 1;
+        if f = ff    then res0p := res0p + 10;
+        if f = t     then res0p := res0p + 100;
+        if f = false then res0p := res0p + 1000;
+
+        if true  = true  then res0p := res0p + 10000;
+        if false = false then res0p := res0p + 10000;
+        if true  = false then res0p := res0p + 10000;
+        if false = true  then res0p := res0p + 10000;
+
+        if t # t    then res0n := res0n + 1;
+        if t # tt   then res0n := res0n + 10;
+        if t # f    then res0n := res0n + 100;
+        if t # true then res0n := res0n + 1000;
+
+        if f # f     then res0n := res0n + 1;
+        if f # ff    then res0n := res0n + 10;
+        if f # t     then res0n := res0n + 100;
+        if f # false then res0n := res0n + 1000;
+
+        if true  # true  then res0n := res0n + 10000;
+        if false # false then res0n := res0n + 10000;
+        if true  # false then res0n := res0n + 10000;
+        if false # true  then res0n := res0n + 10000;
+
+        (* expected p = 22022, n = 20200 *)
+    end;
 
 procedure negation;
     var tmp: boolean;
@@ -58,6 +93,7 @@ procedure complex;
     end;
 
 begin
+    call ineqAndEq;
     call negation;
     call and;
     call or;

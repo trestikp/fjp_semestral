@@ -1,13 +1,27 @@
+let lastMoveY;
+let lastMoveX;
+
 window.addEventListener("load", function() {
     createResizeTerminal();
     createResizeEditor();
+    createResizeWindowListener();
 });
+
+function createResizeWindowListener() {
+    window.addEventListener("resize", function() {
+        if (lastMoveX) {
+            setMoveX(lastMoveX);
+        }
+
+        if (lastMoveY) {
+            setMoveY(lastMoveY);
+        }
+    })
+}
 
 function createResizeTerminal() {
     let resize = document.querySelector("#resizeTerminal");
-    let down = document.querySelector(".terminal");
     let editor = document.querySelectorAll(".editor");
-    let middleEditor = document.querySelector(".middle-editor");
 
     var dragY = false;
     resize.addEventListener("mouseup", function (e) {
@@ -22,8 +36,8 @@ function createResizeTerminal() {
         el.addEventListener("mousemove", function (e) {
             let moveY = e.y;
             if (dragY) {
-                down.style.height = document.getElementsByTagName("html")[0].getBoundingClientRect().height - moveY - resize.getBoundingClientRect().height / 2 + "px";
-                middleEditor.style.maxHeight = moveY - document.getElementsByTagName("nav")[0].getBoundingClientRect().height - resize.getBoundingClientRect().height / 2 + "px";
+                lastMoveY = moveY;
+                setMoveY(moveY);
             }
         });
     })
@@ -33,33 +47,46 @@ function createResizeTerminal() {
             dragY = false;
         });
     })
-
-    
 }
+
+function setMoveY(moveY) {
+    let down = document.querySelector(".terminal");
+    let middleEditor = document.querySelector(".middle-editor");
+    let resize = document.querySelector("#resizeTerminal");
+
+    down.style.height = document.getElementsByTagName("html")[0].getBoundingClientRect().height - moveY - resize.getBoundingClientRect().height / 2 + "px";
+    middleEditor.style.maxHeight = moveY - document.getElementsByTagName("nav")[0].getBoundingClientRect().height - resize.getBoundingClientRect().height / 2 + "px";
+} 
 
 function createResizeEditor() {
     let resize = document.querySelector("#resize");
     let left = document.querySelector(".left");
     let editor = document.querySelector(".editor");
 
-    let moveX =
-    left.getBoundingClientRect().width +
-    resize.getBoundingClientRect().width / 2;
+    let moveX = left.getBoundingClientRect().width + resize.getBoundingClientRect().width / 2;
 
     var drag = false;
     resize.addEventListener("mousedown", function (e) {
-    drag = true;
-    moveX = e.x;
+        drag = true;
+        moveX = e.x;
     });
 
     editor.addEventListener("mousemove", function (e) {
-    moveX = e.x;
-    if (drag)
-        left.style.width =
-            moveX - resize.getBoundingClientRect().width / 2 + "px";
+        moveX = e.x;
+        if (drag) {
+            lastMoveX = moveX;
+            setMoveX(moveX);        
+        }
     });
 
     editor.addEventListener("mouseup", function (e) {
-    drag = false;
+        drag = false;
     });
+}
+
+function setMoveX(moveX) {
+    let resize = document.querySelector("#resize");
+    let left = document.querySelector(".left");
+
+    left.style.width = moveX - resize.getBoundingClientRect().width / 2 + "px";
 }

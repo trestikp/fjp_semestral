@@ -217,6 +217,7 @@ let recursive_descent = (function() {
 
     let descent = ({
         SB_DB_PC_RV: 4, // basic registers (static base, dynamic base, program counter) + newly added Return Value
+        main_context_name: "main",
         symbol: null,
         last_symbol_value: null,
         symbol_value: null,
@@ -263,7 +264,6 @@ let recursive_descent = (function() {
                 // probably should do symbol_counter++; for correct highlighting
             }
     
-            // TODO tokenizer.EOF = 1 - this might cause trouble when parsing number "1" ?
             if (this.symbol === tokenizer.EOF)
                 this.symbol = Symbols.EOF; // EOF should throw error anywhere in recursive_descent - MUST NOT BE PART OF GRAMMAR
         },
@@ -624,7 +624,7 @@ let recursive_descent = (function() {
                     return false;
                 }
 
-                // TODO: this will be useless with recursion - for that dynamic level counter would be needed
+                // TODO: this will be useless with recursion - for that dynamic level counter would be needed (recursion will never work...)
                 push_instruction(Instructions.LOD, Math.abs(v.level - this.level_counter), v.position);
                 return v.type;
             } else if (this.accept(Symbols.input)) {
@@ -641,7 +641,6 @@ let recursive_descent = (function() {
                         }
                     case Symbols_Input_Type.float:
                     case Symbols_Input_Type.integer:
-                        // push_instruction(Instructions.LIT, 0, this.last_symbol_value);
                         // NOTE: praseFloat should return integer value, if the value doesn't have decimal part
                         push_instruction(Instructions.LIT, 0, parseFloat(this.last_symbol_value));
                         break;
@@ -741,8 +740,7 @@ let recursive_descent = (function() {
                     return false;
             }
 
-            // TODO: if this is here, it only consumes the first command in a block (= scope)
-            this.accept(Symbols.semicolon); // statement can (but doesn't have to be) ended with ';'
+            this.accept(Symbols.semicolon); // statement can (but doesn't have to be) ended with ';' (no if)
 
             return true;
         },
@@ -813,7 +811,6 @@ let recursive_descent = (function() {
             for (let i = 0; i < vars.length; i++) {
                 let val = vars[i];
                 if (val.constant) {
-                    // TODO: linting suggest val.value is problematic, but i dont know why
                     if (val.value == undefined || val.value == null) {
                         this.error("Failed to generate constant initialization instructions. Constant: " + 
                             val.name + " does not have a value!");
@@ -834,30 +831,7 @@ let recursive_descent = (function() {
                     push_instruction(Instructions.STO, 0, val.position);
                 }
             }
-            // vars.forEach(function (val, i) {
-            //     if (val.constant) {
-            //         // TODO: linting suggest val.value is problematic, but i dont know why
-            //         if (val.value == undefined || val.value == null) {
-            //             this.error("Failed to generate constant initialization instructions. Constant: " + 
-            //                 val.name + " does not have a value!");
-            //             return false;
-            //         }
 
-            //         switch (val.type) {
-            //             case Symbols_Input_Type.boolean:
-            //                 push_instruction(Instructions.LIT, 0, get_boolean_as_int(val.value));
-            //             // TODO: other types
-            //             default:
-            //                 push_instruction(Instructions.LIT, 0, val.value);
-            //         }
-                    
-            //         // push_instruction(Instructions.STO, val.level, val.position);
-            //         // level is always 0, because we are initing constants for current scope (each scope inits its own constants)
-            //         push_instruction(Instructions.STO, 0, val.position);
-            //     }
-            // })
-
-            // TODO: set PC
             if (!this.statement()) {
                 // print some error? - statement compiling will print errors on where it failed
                 return false;
@@ -870,11 +844,9 @@ let recursive_descent = (function() {
             // setting stack frame allocation AFTER statements, because statements can require "dynamic" number of variables
             stac_alloc_inst.par2 = this.SB_DB_PC_RV + pp_count + vars.length + this.for_var_count;
 
-            console.log("Allocated " + this.for_var_count + " cells for for loops"); // TODO: remove - debug
-
             this.for_var_count = 0;
 
-            // TODO: this is doubled, when return is last statement
+            // TODO: this is doubled, when return is last statement (= unreachable - small optimalization = low prio)
             push_instruction(Instructions.RET, 0, 0);
 
             return block_start;
@@ -887,7 +859,7 @@ let recursive_descent = (function() {
 
             this.next_sym();
 
-            let main_context = this.push_context("main", -1); // TODO main block name constant?
+            let main_context = this.push_context(this.main_context_name, -1);
             let block_start = 0;
             if ((block_start = this.block()) === false)
                 return this.compilationErrors; // failed to parse the body of the program - dot won't be reached by tokenizer (lexer)
@@ -922,7 +894,6 @@ let recursive_descent = (function() {
          */
         push_context: function(c_name, c_address, c_return_type = null) {
             console.log("adding context: " + c_name);
-            // TODO: not doing error checking - is that ok? - only used privately anyway
             this.context_list.push({c_name, c_address, c_return_type});
             return this.context_list[this.context_list.length - 1];
         },
@@ -1002,7 +973,6 @@ let recursive_descent = (function() {
 
             ident_name = this.last_symbol_value; // name is valid identifier
 
-            // TODO: test if this works, this will most likely not work correctly
             // [: data_type]
             if (this.accept(Symbols.colon))
                 // lexer validates type
@@ -1079,7 +1049,6 @@ let recursive_descent = (function() {
                 }
 
             // at this point everything should be validated - returning variable object
-            // TODO - level and position - variable(name, type, level, position); -- might be unnecessary
             return make_var(name_and_type[0], name_and_type[1]);
         },
     
@@ -1107,45 +1076,11 @@ let recursive_descent = (function() {
                 this.error("Failed to validate value.");
                 return false;
             }
-            // if (this.validate_value_and_type(this.last_symbol_value, var_obj.type) === false) {
-            //     this.error("Failed to validate value.");
-            //     return false;
-            // }
 
-            var_obj.value = this.last_symbol_value; // TODO: parse last_symbol_value as value of type?
+            var_obj.value = this.last_symbol_value;
             var_obj.constant = true;
 
             return var_obj;
-
-            // // this will be array of [name, data_type], where data_type can be null
-            // let name_and_type = this.block_ident_declaration();
-
-            // // stop parsing if error occured - printing error is handled by block_ident_declaration
-            // if (name_and_type[0] == null)
-            //     return false;
-
-            // // =
-            // if (!this.accept(Symbols.eq)) {
-            //     this.error("Expected '=' symbol but received: " + this.last_symbol_value);
-            //     return false;
-            // }
-
-            // // TODO: this works differently now
-            // // value - can be either input (string, maybe something more?) or number (both int and float)
-            // if (!(this.accept(Symbols.input) || this.accept(Symbols.number))) {
-            //     this.error("Following value is invalid: " + this.last_symbol_value);
-            //     return false;
-            // }
-
-            // let type = this.validate_value_and_type(this.last_symbol_value, name_and_type[1]);
-            // if (type === false) {
-            //     // error should already be printed by validate_value_and_type
-            //     return false;
-            // }
-
-            // // at this point everything should be validated - returning constant
-            // // TODO - level and position 
-            // return variable(name_and_type[0], type);
         },
 
         block_procedure: function() {
@@ -1193,8 +1128,7 @@ let recursive_descent = (function() {
                 
                 // ;
                 if (!this.accept(Symbols.close_bra)) {
-                    // TODO: see if tokenizer can provide line number for this error (it should)
-                    this.error("Procedure paramater declaration MUST BE closed by ')'");
+                    this.error("Procedure paramater declaration must be closed by ')'");
                     return -1;
                 }
             }
@@ -1322,15 +1256,15 @@ let recursive_descent = (function() {
             } while (this.accept(Symbols.comma));
 
             // } := {
-            if (this.accept(Symbols.close_curl)) {
+            if (!this.accept(Symbols.close_curl)) {
                 this.error("Multiple assignment statement expects '}' to close identifier list.");
                 return false;
             }
-            if (this.accept(Symbols.assignment)) {
+            if (!this.accept(Symbols.assignment)) {
                 this.error("Multiple assignment statement expects assignment symbol.");
                 return false;
             }
-            if (this.accept(Symbols.open_curl)) {
+            if (!this.accept(Symbols.open_curl)) {
                 this.error("Multiple assignment statement expects '{' to open value list.");
                 return false;
             }
@@ -1338,14 +1272,28 @@ let recursive_descent = (function() {
             let i = 0;
             // value {, value}
             do {
+                if (ident_counter <= 0) {
+                    this.error("Too many values in parallel assignment!");
+                    return false;
+                }
+
                 if (!this.accept(Symbols.input)) {
                     this.error("Invalid value. This value is a keyword or is otherwise invalid. Value: " + this.symbol_value);
                     return false;
                 }
 
+                if (this.validate_last_type_to_expected(vars[i].type) === false) {
+                    this.error("Failed to validate value type. Variable type: " + vars[i].type + 
+                               ", value type: " + symbol_input_type);
+                    return false;
+                }
                 
-                // TODO: value type checking (after LINT refactor)
-                push_instruction(Instructions.LIT, 0, this.last_symbol_value);
+                // only boolean needs to be pushed differently... atleast for now
+                if (vars[i].type == Symbols_Input_Type.boolean)
+                    push_instruction(Instructions.LIT, 0, this.get_boolean_as_int(this.last_symbol_value));
+                else
+                    push_instruction(Instructions.LIT, 0, this.last_symbol_value);
+
                 push_instruction(Instructions.STO, vars[i].level, vars[i].position);
 
                 ident_counter--;
@@ -1354,6 +1302,12 @@ let recursive_descent = (function() {
 
             if (ident_counter != 0) {
                 this.error("Multiple assignment statement identifier count and value count do not match.");
+                return false;
+            }
+
+            // }
+            if (!this.accept(Symbols.close_curl)) {
+                this.error("Multiple assignment statement expects '}' to close value list.");
                 return false;
             }
 
@@ -1391,7 +1345,7 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // TODO: what to do with this shit? We must have it, because it is original PL/0 grammar
+            // TODO: what to do with this sh*t? We must have it, because it is original PL/0 grammar
             
             return true;
         },
@@ -1405,7 +1359,7 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // TODO: what to do with this shit? We must have it, because it is original PL/0 grammar
+            // TODO: what to do with this sh*t? We must have it, because it is original PL/0 grammar
             
             return true;
         },
@@ -1465,7 +1419,7 @@ let recursive_descent = (function() {
                     return false;
                 }
 
-                jmp_over_else.par2 = instruction_list.length; // TODO: maybe -1 here?
+                jmp_over_else.par2 = instruction_list.length;
             }
 
             return true;
@@ -1540,7 +1494,7 @@ let recursive_descent = (function() {
             }
 
             push_instruction(Instructions.JMP, 0, while_start_addr);
-            while_end.par2 = instruction_list.length; // TODO: maybe -1 here?
+            while_end.par2 = instruction_list.length;
 
             return true;
         },
@@ -1605,7 +1559,7 @@ let recursive_descent = (function() {
             }
 
             push_instruction(Instructions.JMP, 0, for_start);
-            for_jump_instruction.par2 = instruction_list.length; // TODO: maybe -1 here?
+            for_jump_instruction.par2 = instruction_list.length;
 
             this.for_nest_counter--;
 

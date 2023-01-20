@@ -42,6 +42,7 @@ TURN-IN CHECKLIST:
 - [x] for
 - [x] return value - tested integer only (TODO: test other data types)
 - [ ] multiple assignment
+- [x] parallel assignment
 - [ ] expression priority with ()
 - [ ] parameters? (not even done)
 - [ ] ternary? (not even done - doesn't have much use)

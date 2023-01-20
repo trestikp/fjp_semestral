@@ -235,7 +235,7 @@ const DEBUGGER_IP = "http://localhost:3000";
             if (returnErrors) {
                 return lastErrors;
             } 
-            
+
             prepareErrors(validateOnly);
         }
     }
@@ -536,15 +536,20 @@ const DEBUGGER_IP = "http://localhost:3000";
 
             //TODO Replace with Monaco call
 
-            const targetLineIndex = error.line - 1;
-            const targetLine = codeLines[targetLineIndex];
+            let targetLineIndex = error.line - 1;
+            let targetLine = codeLines[targetLineIndex];
+
+            while (targetLine.indexOf(error.symbol) == -1 && targetLineIndex > 0) {
+                targetLineIndex--;
+                targetLine = codeLines[targetLineIndex];
+            }
 
             const startIndex = targetLine.indexOf(error.symbol);
             const endIndex = targetLine.indexOf(error.symbol) + error.symbol.length + 1;
             
             errorMarkers.push({
-                startLineNumber: error.line,
-                endLineNumber: error.line,
+                startLineNumber: targetLineIndex + 1,
+                endLineNumber: targetLineIndex + 1,
                 startColumn: startIndex,
                 endColumn: endIndex,
                 message: error.err,

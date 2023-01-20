@@ -14,6 +14,6 @@ procedure paramSimpleTest(p1, p2: float, p3: boolean);
 
 begin
     call test;
-    resFloat1 = call returnTest;
+    resFloat1 := call returnTest;
     call paramSimpleTest(a1, 2.8, true);
 end.

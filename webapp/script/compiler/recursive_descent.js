@@ -779,14 +779,18 @@ let recursive_descent = (function() {
             // must push vars before procedures, so we can use them in procs
             this.variables.push(vars);
 
-            let pp_count = 0; // procedure-param count
+            let parameters = []; // procedure parameters
             // procedures
             while (this.accept(Symbols.procedure)) {
-                pp_count = this.block_procedure();
+                parameters = this.block_procedure();
                 
-                if (pp_count < 0)
+                if (parameters == null)
                     return false; // failed to compile procedure
             }
+
+            // push parameters to variables and set var length
+            vars.push(parameters);
+            this.context_list[this.context_list.length - 1].c_var_count = vars.length;
 
             // this value is returned - this is an address where this block instructions start
             let block_start = instruction_list.length;
@@ -1059,14 +1063,14 @@ let recursive_descent = (function() {
                 return_type = Symbols_Input_Type[this.last_symbol_value];
                 if (return_type == undefined) {
                     this.error("Failed to determine return type of procedure. Value: " + this.last_symbol_value);
-                    return -1;
+                    return null;
                 }
             }
 
             // ident
             if (!this.accept(Symbols.ident)) {
                 this.error("Following identifier is invalid: " + this.last_symbol_value);
-                return -1;
+                return null;
             }
 
             ident_name = this.last_symbol_value; // name is valid identifier
@@ -1075,10 +1079,10 @@ let recursive_descent = (function() {
             if (this.get_context_by_name(ident_name) != null) {
                 this.error("Compilation failed because context with name: " + ident_name + ", already exists." + 
                         " Please ensure name: " + ident_name + " is unique.");
-                return -1;
+                return null;
             }
 
-            let vars = this.variables[this.variables.length - 1];
+            let vars = [];
             let var_obj;
             // optionally parameters
             // [ "(" ident [ : data_type ] {"," ident [ : data_type ]} ")" ]
@@ -1092,34 +1096,35 @@ let recursive_descent = (function() {
                     var_obj.level = this.level_counter;
                     var_obj.is_param = true;
                     vars.push(var_obj);
+                    param_count++;
                 } while (this.accept(Symbols.comma));
                 
                 // ;
                 if (!this.accept(Symbols.close_bra)) {
                     this.error("Procedure paramater declaration must be closed by ')'");
-                    return -1;
+                    return null;
                 }
             }
 
             // ;
             if (!this.accept(Symbols.semicolon)) {
                 this.error("Procedure (" + ident_name + ") header (declaration) must end with ';'");
-                return -1;
+                return null;
             }
             
             // block
-            let current_context = this.push_context(ident_name, -1, return_type, param_count, vars.length);
+            let current_context = this.push_context(ident_name, -1, return_type, param_count);
             let block_start = 0;
             if ((block_start = this.block()) === false) {
                 this.error("Failed to compile procedure (" + ident_name + ") body.");
-                return -1;
+                return null;
             }
             current_context.c_address = block_start;
 
             // decrease level counter because we are returning
             this.level_counter--;
 
-            return param_count;
+            return vars;
         },
 
 
@@ -1268,6 +1273,12 @@ let recursive_descent = (function() {
             // except for main - main is always index 0 and is first instruction of the program
             push_instruction(Instructions.CAL, 0, context_index);
 
+            // TODO: jak udelat parametery:
+            /*
+                call je na index -> na indexu je vzdycky jump s adresou -> vlozit instrukce pro inicializaci promenych
+                na adresu skoku a pak vsechny skoky od tutoho posunout o pocet instrukci.. neni to idealni, ale je to jediny zpusob
+            */
+
             let context = this.context_list[context_index];
             if (this.accept(Symbols.open_bra)) {
                 let i = 0;
@@ -1285,11 +1296,9 @@ let recursive_descent = (function() {
                         this.error("The call has more parameters then the procedure defines.");
                         return false;
                     }
-
-                } while (!this.accept(Symbols.close_bra));
+                } while (this.accept(Symbols.comma));
+                
                 if (!this.accept(Symbols.close_bra)) {
-                    
-
                     this.error("Parameter list must be ended with ')'");
                     return false;
                 }

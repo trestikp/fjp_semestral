@@ -136,6 +136,30 @@ const OPR = {
     greater_than_equal: 11, // WARNING: changed compared to manual
 }
 
+const dtype_operations = new Map();
+dtype_operations.set(Symbols_Input_Type.integer, [Symbols.plus, Symbols.minus, Symbols.star, Symbols.slash, Symbols.eq, 
+                                                  Symbols.hash_mark, Symbols.less_than, Symbols.less_then_equal, 
+                                                  Symbols.greater_than, Symbols.greater_than_equal]);
+dtype_operations.set(Symbols_Input_Type.float,   [Symbols.plus, Symbols.minus, Symbols.star, Symbols.slash, Symbols.eq, 
+                                                  Symbols.hash_mark, Symbols.less_than, Symbols.less_then_equal, 
+                                                  Symbols.greater_than, Symbols.greater_than_equal]);
+dtype_operations.set(Symbols_Input_Type.boolean, [Symbols.eq, Symbols.hash_mark, Symbols.tilde, Symbols.ampersand, 
+                                                  Symbols.pipe]);
+dtype_operations.set(Symbols_Input_Type.string,  [Symbols.eq, Symbols.hash_mark, Symbols.plus]);
+
+function has_type_action(type, action) {
+    if (dtype_operations.has(type)) {
+        if (dtype_operations.get(type).indexOf(action) >= 0)
+            return true;
+
+        this.error("Type: " + type +" does not support action: " + action);
+    } else {
+        this.error("Cannot verify action for type: " + type + ". This type does not exist.");
+    }
+
+    return false;
+}
+
 
 // TODO: this would be nice to have it private - only accessible through functions
 let instruction_list = [];
@@ -273,20 +297,38 @@ let recursive_descent = (function() {
                 this.condition_expression_inner();
 
                 if (is_true_on_and) {
-                    push_instruction(Instructions.OPR, 0, OPR.addition); // cond1 + cond2
-                    push_instruction(Instructions.LIT, 0, 2); // push 2
-                    push_instruction(Instructions.OPR, 0, OPR.equality);
+                    this.logical_and_inst();
                 } else {
-                    push_instruction(Instructions.OPR, 0, OPR.addition); // cond1 + cond2
-                    push_instruction(Instructions.LIT, 0, 0); // push 2
-                    push_instruction(Instructions.OPR, 0, OPR.inequality); // if not equal to 0, then either (or both) conditions is true - 1 pushed to stack
+                    this.logical_or_inst();
                 }
             }
 
             return true;
         },
 
-        negate_condtion_inst: function() {
+        /** 
+         * Takes two values at the top of the stack and adds them together. Expects boolean values at the stack (1/0).
+         * Then pushes 2 and call operation equality - this consumes 2 values and pushes "1" if the values equal 2
+         * => both values were one, so both were true. Pushes "0" otherwise.
+         */
+        logical_and_inst: function() {
+            push_instruction(Instructions.OPR, 0, OPR.addition); // cond1 + cond2
+            push_instruction(Instructions.LIT, 0, 2); // push 2
+            push_instruction(Instructions.OPR, 0, OPR.equality);
+        },
+
+        /**
+         * Takes two values at the top of the stack and adds them together. Expects boolean values at the stack (1/0).
+         * Then pushes 0 and call operation IN-equality - this consumes 2 values and pushes "1" if the sum does not
+         * equal 0, pushes "0" if the sum is 0 => atleast one value has to be true.
+         */
+        logical_or_inst: function() {
+            push_instruction(Instructions.OPR, 0, OPR.addition); // cond1 + cond2
+            push_instruction(Instructions.LIT, 0, 0); // push 2
+            push_instruction(Instructions.OPR, 0, OPR.inequality); // if not equal to 0, then either (or both) conditions is true - 1 pushed to stack
+        },
+
+        negate_condition_inst: function() {
             // result of condition (comparison operator) can only be 1/0
             // (res + 1) % 2 = new_res - should invert truth value
             push_instruction(Instructions.LIT, 0, 1);
@@ -308,7 +350,7 @@ let recursive_descent = (function() {
 
             // result of the condition is on stack
             if (negate_cond) {
-                this.negate_condtion_inst();
+                this.negate_condition_inst();
             }
         },
 
@@ -385,12 +427,10 @@ let recursive_descent = (function() {
                 }
 
                 switch (expr_type) {
-                    case Symbols_Input_Type.boolean:
-                        // TODO: custom boolean comparison
-                        break;
                     case Symbols_Input_Type.string:
                         // TODO: cutom string comparions
                         break;
+                    case Symbols_Input_Type.boolean: // boolean is represented as 1/0 - same operations as int
                     case Symbols_Input_Type.integer:
                     case Symbols_Input_Type.float:
                     default:
@@ -490,42 +530,86 @@ let recursive_descent = (function() {
         },
 
         term: function() {
+            let inner_type;
+
+            if ((inner_type = this.term_inner()) === false) {
+                this.error("Failed to compile term.");
+                return false;
+            }
+
+            let loop_inner_type;
+            let operation;
+
+            while (this.accept(Symbols.star) || this.accept(Symbols.slash) || 
+                   this.accept(Symbols.ampersand) || this.accept(Symbols.pipe)) 
+            {
+                operation = this.last_symbol_value; // JS can work with this as if it was Symbol, altough its string (lexer yytext)
+                
+                if ((loop_inner_type = this.term_inner()) === false) {
+                    this.error("Failed to compile additional term.");
+                    return false;
+                }
+
+                if (inner_type != loop_inner_type) {
+                    this.error("'Term' factors have different data type!" + 
+                        " Operations *,/,&,| can only be used on the same data type.");
+                    return false;
+                }
+
+                if (!has_type_action(inner_type, operation)) {
+                    this.error("'Term' error. Type: " + inner_type + " does not suppord operation: " + operation);
+                    return false;
+                }
+
+                switch (operation) {
+                    case Symbols.star:
+                    case Symbols.slash:
+                        push_instruction(Instructions.OPR, 0, operation);
+                        break;
+                    case Symbols.ampersand:
+                        // these instructions are used to take 2 boolean values on stack and combine it to AND result
+                        this.logical_and_inst();
+                        break;
+                    case Symbols.pipe:
+                        // these instructions are used to take 2 boolean values on stack and combine it to OR result
+                        this.logical_or_inst();
+                        break;
+                    default:
+                        this.error("Invalid 'term' operation!");
+                        return false;
+                }                
+            }
+
+            return inner_type;
+        },
+
+        term_inner: function() {
+            let negate = false;
+
+            if (this.accept(Symbols.tilde)) {
+                negate = true;
+            }
+
             let factor_type;
 
             // factor load/ prepares value to stack
             if ((factor_type = this.factor()) === false) {
-                this.error("'Term' (multiplication/ division expression) failed to obtain factor");
+                this.error("'Term' failed to obtain factor (identifier/ value)");
                 return false;
             }
 
-            let loop_factor_type;
-            let operation;
-
-            // same if as the loop below - if we go to the loop we need to verify, that the operation makes sense
-            if (this.symbol == Symbols.star || this.symbol == Symbols.slash)
-                if (factor_type == Symbols_Input_Type.string || factor_type == Symbols_Input_Type.boolean) {
-                    this.error("'Term' error. Cannot multiply or divide booleans or strings. Type error: " + 
-                        factor_type);
-                    return false;
-                }
-
-            while (this.accept(Symbols.star) || this.accept(Symbols.slash)) {
-                // already verified, that the operation is either * or /. Also must save operation before factor()
-                operation = this.last_symbol_value == Symbols.star ? OPR.multiplication : OPR.division; 
+            if (negate) {
+                if (!has_type_action(factor_type, Symbols.tilde))
+                    return false; // error printed by has_type_action
                 
-                if ((loop_factor_type = this.factor()) === false) {
-                    this.error("'Term' (multiplication/ division expression) failed to obtain additional factor");
+                if (factor_type == Symbols_Input_Type.boolean) {
+                    // altough the function name says "condition" the principle for inverting boolean is the same => condition is boolean
+                    this.negate_condition_inst();
+                } else {
+                    // this shouldn't occur, unless someone tries to add new data type to the dtype_operations map
+                    this.error("Negation '~' is only defined for booleans!");
                     return false;
                 }
-
-                if (factor_type != loop_factor_type) {
-                    this.error("'Term' (multiplication/ division expression) factors have different data type!" + 
-                        " Operations *,/ cannot be executed with incompatible data types");
-                    return false;
-                }
-
-                // another factor was loaded to stack, operation between 2 factors is now to be done and result will be on the stack
-                push_instruction(Instructions.OPR, 0, operation);
             }
 
             return factor_type;
@@ -726,7 +810,8 @@ let recursive_descent = (function() {
             let stac_alloc_inst = push_instruction_and_return(Instructions.INT, 0, 0);
 
             // initialize constant values
-            vars.forEach(function (val, i) {
+            for (let i = 0; i < vars.length; i++) {
+                let val = vars[i];
                 if (val.constant) {
                     // TODO: linting suggest val.value is problematic, but i dont know why
                     if (val.value == undefined || val.value == null) {
@@ -734,12 +819,43 @@ let recursive_descent = (function() {
                             val.name + " does not have a value!");
                         return false;
                     }
-                    push_instruction(Instructions.LIT, 0, val.value);
+
+                    switch (val.type) {
+                        case Symbols_Input_Type.boolean:
+                            push_instruction(Instructions.LIT, 0, this.get_boolean_as_int(val.value));
+                            break;
+                        // other types (float, string, integer) use raw value (string is a pointer to heap = integer)
+                        default:
+                            push_instruction(Instructions.LIT, 0, val.value);
+                    }
+                    
                     // push_instruction(Instructions.STO, val.level, val.position);
                     // level is always 0, because we are initing constants for current scope (each scope inits its own constants)
                     push_instruction(Instructions.STO, 0, val.position);
                 }
-            })
+            }
+            // vars.forEach(function (val, i) {
+            //     if (val.constant) {
+            //         // TODO: linting suggest val.value is problematic, but i dont know why
+            //         if (val.value == undefined || val.value == null) {
+            //             this.error("Failed to generate constant initialization instructions. Constant: " + 
+            //                 val.name + " does not have a value!");
+            //             return false;
+            //         }
+
+            //         switch (val.type) {
+            //             case Symbols_Input_Type.boolean:
+            //                 push_instruction(Instructions.LIT, 0, get_boolean_as_int(val.value));
+            //             // TODO: other types
+            //             default:
+            //                 push_instruction(Instructions.LIT, 0, val.value);
+            //         }
+                    
+            //         // push_instruction(Instructions.STO, val.level, val.position);
+            //         // level is always 0, because we are initing constants for current scope (each scope inits its own constants)
+            //         push_instruction(Instructions.STO, 0, val.position);
+            //     }
+            // })
 
             // TODO: set PC
             if (!this.statement()) {

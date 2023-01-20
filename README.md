@@ -27,6 +27,9 @@ TURN-IN CHECKLIST:
     - [x] \>
     - [x] \>=
 - boolean:
+    - [ ] ~
+    - [ ] &
+    - [ ] |
     - [ ] =
     - [ ] \#
 - string:

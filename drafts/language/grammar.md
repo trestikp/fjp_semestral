@@ -98,8 +98,8 @@ factor = ident | number | "(" expression ")";
                   | "if" condition_expression "then" statement [ "else" statement ]
                   | "(" condition_expression ") ? " "return" statement ":" "return" statement
                   | "while" condition_expression "do" statement
-                  | "for" number "to" number "do" statement
-                  | "return" value;
+                  | "for" expression "to" expression "do" statement
+                  | "return" expression;
 
     condition_expression = [ condition | "~" condition ] { ("&"|"|") condition }
 
@@ -109,9 +109,9 @@ factor = ident | number | "(" expression ")";
                 "|" condition |
                 expression ("="|"#"|"<"|"<="|">"|">=") expression ;
 
-    expression = [ "+"|"-"] term { ("+"|"-") term} | "call" ident;
+    expression = ["+"|"-"] term {("+"|"-") term} | "call" ident;
 
-    term = factor {("*"|"/") factor};
+    term = ["~"] factor { ("*"|"/"|"&"|"|") ["~"] factor};
 
-    factor = ident | number | value | "(" expression ")";
+    factor = ident | value | "(" expression ")";
 ```

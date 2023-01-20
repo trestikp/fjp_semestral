@@ -232,7 +232,7 @@ let recursive_descent = (function() {
         level_counter: 0,
         for_nest_counter: 0, // holds total number of nested if
         for_var_count: 0, // increses/ decreses when entering/ leaving for loop
-        expr_left_type: Symbols_Input_Type.ERR, // expressions validate data type against this - based on left side data type
+        ternary_return_flag: false,
     
         /**
          * Loads next symbol from lexer (tokenizer) into symbol variable. 
@@ -853,9 +853,15 @@ let recursive_descent = (function() {
         },
     
         program: function() {
+            // reset recursive descent flags
             this.compilationErrors = []; //Empty the errors ftom previous iterations
+            this.variables = [];
             this.context_list = [];
             instruction_list = []; // empty instruction list (global)
+            this.level_counter = 0;
+            this.for_nest_counter = 0;
+            this.for_var_count = 0;
+            this.ternary_return_flag = false;
 
             this.next_sym();
 
@@ -1201,32 +1207,6 @@ let recursive_descent = (function() {
             // expecting that expression result is at the top of the stack
             push_instruction(Instructions.STO, Math.abs(variable.level - this.level_counter), variable.position);
 
-            // := ident (indefinetly)
-            // do {
-            //     if (!this.accept(Symbols.assignment)) {
-            //         this.error("Statement expected assignment symbol. Statement: " + this.symbol_value);
-            //         return false;
-            //     }
-
-            //     if (!this.expression()) {
-            //         this.error("Assignment must end with a valid expression.");
-            //         return false;
-            //     }
-
-            //     // TODO should save idents to some list
-            // } while (this.accept(Symbols.ident));
-
-            // expression
-            // if (!this.expression()) {
-            //     this.error("Assignment must end with a valid expression.");
-            //     return false;
-            // }
-
-            // // reached end of statement
-            // if (!this.accept(Symbols.semicolon)) return false;
-
-            // TODO: instructions assigning expression result to all identifiers
-
             return true;
         },
 
@@ -1429,6 +1409,8 @@ let recursive_descent = (function() {
             // ( verified by caller
             this.accept(Symbols.open_bra);
 
+            this.ternary_return_flag = true;
+
             // condition
             if (!this.condition_expression()) {
                 this.error("Failed to evaluate tenrary operator condition.");
@@ -1447,24 +1429,34 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // TODO: "internally 'return'"
+            let ternary_branch_jmp = push_instruction_and_return(Instructions.JMC, 0, 0);
+
             if (!this.statement()) {
-                this.error("First statement in the ternary operator failed to execute.");
+                this.error("First expression in the ternary operator failed to execute.");
                 return false;
             }
 
-            if (!this.accept(Symbols.quest_mark)) {
+            let jmp_over_negative = push_instruction_and_return(Instructions.JMP, 0, 0);
+            ternary_branch_jmp.par2 = instruction_list.length;
+
+            if (!this.accept(Symbols.colon)) {
                 this.error("Expected ':' to separate ternary statements. Received: " + this.symbol_value);
                 return false;
             }
 
-            // TODO: "internally 'return'"
             if (!this.statement()) {
                 this.error("Second statement in the ternary operator failed to execute.");
                 return false;
             }
 
-            // TODO: guess what, instructions
+            jmp_over_negative.par2 = instruction_list.length;
+
+            this.ternary_return_flag = false;
+
+            // register 3 (cell 4) is for any use - now primarily for return values
+            // push_instruction(Instructions.STO, 0, 3);
+
+            // what to do with RV now? this is a statement - how can we assing it
 
             return true;
         },
@@ -1575,9 +1567,17 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // register 3 (cell 4) is for any use - now primarily for return values
-            push_instruction(Instructions.STO, 1, 3);
-            push_instruction(Instructions.RET, 0, 0);
+            if (this.ternary_return_flag) {
+                // if its ternary, save value to current context RV and push the value to stack
+                // register 3 (cell 4) is for any use - now primarily for return values
+                push_instruction(Instructions.STO, 0, 3);
+                push_instruction(Instructions.LOD, 0, 3);
+            } else {
+                // if its not ternary, save value to caller RV and return
+                // register 3 (cell 4) is for any use - now primarily for return values
+                push_instruction(Instructions.STO, 1, 3);
+                push_instruction(Instructions.RET, 0, 0);
+            }
 
             return true;
         },

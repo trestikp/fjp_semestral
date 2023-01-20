@@ -1,6 +1,3 @@
-//TODO: Move to config
-const DEBUGGER_IP = "http://localhost:3000";
-
 (function ($) {
     let Parser = {};
 
@@ -34,7 +31,8 @@ const DEBUGGER_IP = "http://localhost:3000";
         //Print welcome message <3
         Parser.writeToTerm("Welcome to PL0 parser :)");
 
-        //TODO: RESET SCROLL VALUE TO THE TOP LEFT CORNER
+        //Always set scroll to top left
+        window.scrollTo(0, 0);
     });
 
     //=======================================================
@@ -183,7 +181,7 @@ const DEBUGGER_IP = "http://localhost:3000";
         }
 
         // @ts-ignore debuggerFrame is HTMLIFrameElement not HTMLElement
-        debuggerFrame.src = DEBUGGER_IP;
+        debuggerFrame.src = Config.DEBUGGER_IP;
         debuggerFrame.style.top = "99.99vh";
     };
 
@@ -533,8 +531,6 @@ const DEBUGGER_IP = "http://localhost:3000";
 
         for (const errorIndex in lastErrors) {
             const error = lastErrors[errorIndex];
-
-            //TODO Replace with Monaco call
 
             let targetLineIndex = error.line - 1;
             let targetLine = codeLines[targetLineIndex];

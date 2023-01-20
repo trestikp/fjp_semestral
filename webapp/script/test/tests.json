@@ -1,6 +1,8 @@
 [
     "staticTest.js",
     "dynamicTest.js",
+    "boolean.js",
+    "conditionConcat.js",
     "floatArithmetics.js",
     "ifElse.js",
     "intArithmetics.js",

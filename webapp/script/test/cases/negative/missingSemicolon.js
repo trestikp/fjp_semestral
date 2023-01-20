@@ -9,12 +9,12 @@
             throw "Expected at 1 error, but got " + errors.length; 
         } 
         
-        if(errors[0].symbol != "procedure") {
-            throw "Expected error symbol procedure, but got " + errors[0].symbol; 
+        if(errors[0].symbol != "plus") {
+            throw "Expected error symbol plus, but got " + errors[0].symbol; 
         }
 
-        if(errors[0].err != "Procedure (nasobeni) header (declaration) must end with ';'") {
-            throw "Expected error string \"Procedure (nasobeni) header (declaration) must end with ';'\" but got \"" + errors[0].err + "\""; 
+        if(errors[0].err != "Procedure (plus) header (declaration) must end with ';'") {
+            throw "Expected error string \"Procedure (plus) header (declaration) must end with ';'\" but got \"" + errors[0].err + "\""; 
         }
     }
 })($);

@@ -7,7 +7,7 @@ const Symbols = {
     do:             "do",
     else:           "else",
     end:            "end", 
-    foreach:        "foreach", // NOTE: must be matched before "for"
+    foreach:        "foreach", // NOTE: must be matched before "for" -- cancelled
     for:            "for",
     if:             "if",
     in:             "in",
@@ -101,23 +101,6 @@ const Instructions = {
 //     greater_than_equal: 13,
 // }
 
-// KIV/FJP inerpret operations
-// export enum OperationType {
-//     U_MINUS = 1,
-//     ADD = 2,
-//     SUB = 3,
-//     MULT = 4,
-//     DIV = 5,
-//     MOD = 6,
-//     IS_ODD = 7,
-//     EQ = 8,
-//     N_EQ = 9,
-//     LESS_THAN = 10,
-//     MORE_EQ_THAN = 11,
-//     MORE_THAN = 12,
-//     LESS_EQ_THAN = 13,
-// }
-
 // operations according to the online interpret for KIV/FJP (some operations are under different number)
 const OPR = {
     return:             0,
@@ -126,7 +109,7 @@ const OPR = {
     subtraction:        3,
     multiplication:     4,
     division:           5,
-    odd:                7, // WARNING: interpreter swapped odd with module compared to the manual
+    odd:                7, // WARNING: interpreter swapped odd with modulo compared to the manual
     modulo:             6, // WARNING: same as odd
     equality:           8,
     inequality:         9,
@@ -136,6 +119,7 @@ const OPR = {
     greater_than_equal: 11, // WARNING: changed compared to manual
 }
 
+// used to verify what operations are permitted with what data type
 const dtype_operations = new Map();
 dtype_operations.set(Symbols_Input_Type.integer, [Symbols.plus, Symbols.minus, Symbols.star, Symbols.slash, Symbols.eq, 
                                                   Symbols.hash_mark, Symbols.less_than, Symbols.less_then_equal, 
@@ -147,8 +131,16 @@ dtype_operations.set(Symbols_Input_Type.boolean, [Symbols.eq, Symbols.hash_mark,
                                                   Symbols.pipe]);
 dtype_operations.set(Symbols_Input_Type.string,  [Symbols.eq, Symbols.hash_mark, Symbols.plus]);
 
+// resulting instructions
 let instruction_list = [];
 
+/**
+ * Used for inserting instructions to instruction_list. Creates object for instruction.
+ * @param {*} inst type (from Instructions enum)
+ * @param {*} par1 first parameter
+ * @param {*} par2 second parameter
+ * @returns 
+ */
 function push_instruction(inst = Instructions.ERR, par1 = -1, par2 = -1) {
     if (inst === Instructions.ERR) {
         // TODO: when this fails, the compilation continues...
@@ -159,11 +151,25 @@ function push_instruction(inst = Instructions.ERR, par1 = -1, par2 = -1) {
     instruction_list.push({inst, par1, par2});
 }
 
+/**
+ * Calls push_instructions and additionaly returns newly constructed instruction.
+ * @param {*} inst type (from Instructions enum)
+ * @param {*} par1 first parameter
+ * @param {*} par2 second parameter
+ * @returns 
+ */
 function push_instruction_and_return(inst = Instructions.ERR, par1 = -1, par2 = -1) {
     push_instruction(inst, par1, par2);
     return instruction_list[instruction_list.length - 1];
 }
 
+/**
+ * Pushes instruction to the start of the list. DOES NOT offset jumps in the list.
+ * @param {*} inst type (from Instructions enum)
+ * @param {*} par1 first parameter
+ * @param {*} par2 second parameter
+ * @returns 
+ */
 function push_instruction_to_start(inst = Instructions.ERR, par1 = -1, par2 = -1) {
     if (inst === Instructions.ERR) {
         console.log("ERROR - tried to push instructions without specifing all parameters");
@@ -173,6 +179,9 @@ function push_instruction_to_start(inst = Instructions.ERR, par1 = -1, par2 = -1
     instruction_list.unshift({inst, par1, par2});
 }
 
+/**
+ * Outputs the instruction list to GUI.
+ */
 function print_instruction_list() {
     let textArea = document.getElementById("editor-out");
     textArea.innerHTML = ""; // clear the text area
@@ -183,16 +192,16 @@ function print_instruction_list() {
                          instruction_list[i].par1 + "\t" + 
                          instruction_list[i].par2 + "\n";
         textArea.innerHTML += line;
-
-        // console.log(i + " " + instruction_list[i].inst + "\t" + 
-        //                       instruction_list[i].par1 + "\t" + 
-        //                       instruction_list[i].par2)
     }
 }
 
+/**
+ * The compiler's main "object"
+ */
 let recursive_descent = (function() {
     /**
-     * Makes object holding information about a variable. Name is required parameter but other parameters have default values.
+     * Makes object holding information about a variable. 
+     * Name is required parameter but other parameters have default values.
      */
     function make_var(name, type = Symbols_Input_Type.integer, value = null, constant = false, level = 0, 
                       position = 0, is_param = false)
@@ -203,16 +212,21 @@ let recursive_descent = (function() {
     }
 
     let descent = ({
+        // "constants"
         SB_DB_PC_RV: 4, // basic registers (static base, dynamic base, program counter) + newly added Return Value
         main_context_name: "main",
+       
+        // lexer variables
         symbol: null,
         last_symbol_value: null,
         symbol_value: null,
         symbol_counter: 0, // increases when lexer parses symbol - can be used to underline syntax errors (should correspond to error word)
+        
+        // compiler output
         compilationErrors: [],
 
         // variables and context_list represent symbol table
-        // array of arrays for constants and variables in a scope - every inner array is one scope of a level (index should correspons to level)
+        // array of arrays (matrix) for constants and variables in a scope - every inner array is one scope of a level (index should correspons to level)
         variables: [],
         context_list: [],
 
@@ -256,6 +270,11 @@ let recursive_descent = (function() {
                 this.symbol = Symbols.EOF; // EOF should throw error anywhere in recursive_descent - MUST NOT BE PART OF GRAMMAR
         },
     
+        /**
+         * Accepts current symbol loaded by lexer if its equal to @sym and loads next symbol.
+         * @param {*} sym expected symbol
+         * @returns true if symbol matches, false otherwise
+         */
         accept: function(sym) {
             if (this.symbol === sym) {
                 this.next_sym();
@@ -266,6 +285,10 @@ let recursive_descent = (function() {
             return false;
         },
     
+        /**
+         * Puts error message into error list to be displayed to user in GUI.
+         * @param {*} err_msg message to be displayed
+         */
         error: function(err_msg) {
             this.compilationErrors.push({
                 line: tokenizer.yylineno + 1,
@@ -275,16 +298,26 @@ let recursive_descent = (function() {
             });
         },
 
+        /**
+         * Grammar rule: condition_expression = ["~"] condition { ("&"|"|") ["~"] condition }
+         * @returns true on success
+         */
         condition_expression: function() {
             this.processing_condition = true;
 
-            this.condition_expression_inner();
+            if (this.condition_expression_inner() === false) {
+                this.error("Failed to parse condition expression.");
+                return false;
+            }
 
             let is_true_on_and;
             while (this.accept(Symbols.ampersand) || this.accept(Symbols.pipe)) {
                 is_true_on_and = this.last_symbol_value == Symbols.ampersand ? true : false;
 
-                this.condition_expression_inner();
+                if (this.condition_expression_inner() === false) {
+                    this.error("Failed to parse condition expression.");
+                    return false;
+                }
 
                 if (is_true_on_and) {
                     this.logical_and_inst();
@@ -320,6 +353,10 @@ let recursive_descent = (function() {
             push_instruction(Instructions.OPR, 0, OPR.inequality); // if not equal to 0, then either (or both) conditions is true - 1 pushed to stack
         },
 
+        /**
+         * "Generates" (pushes) instructions that negate result of a condition on top of the stack 
+         * (results must be boolean = 1/0).
+         */
         negate_condition_inst: function() {
             // result of condition (comparison operator) can only be 1/0
             // (res + 1) % 2 = new_res - should invert truth value
@@ -328,6 +365,11 @@ let recursive_descent = (function() {
             push_instruction(Instructions.OPR, 0, OPR.odd);
         },
 
+        /**
+         * Part of grammar rule: condition_expression = ["~"] condition { ("&"|"|") ["~"] condition }.
+         * Specifically ["~"] condition.
+         * @returns true on success, false on condition compilation failure
+         */
         condition_expression_inner: function() {
             let negate_cond = false;
 
@@ -344,8 +386,14 @@ let recursive_descent = (function() {
             if (negate_cond) {
                 this.negate_condition_inst();
             }
+
+            return true;
         },
 
+        /**
+         * Grammar rule: condition = "odd" expression | expression ("="|"#"|"<"|"<="|">"|">=") expression ;
+         * @returns true on success, false on failure to parse any part of the condition
+         */
         condition: function() {
             let expr_type;
 
@@ -426,9 +474,12 @@ let recursive_descent = (function() {
                     case Symbols_Input_Type.boolean: // boolean is represented as 1/0 - same operations as int
                     case Symbols_Input_Type.integer:
                     case Symbols_Input_Type.float:
-                    default:
                         // assumes that top of stack is results of 2 expressions
                         push_instruction(Instructions.OPR, 0, op_number);
+                        break;
+                    default:
+                        this.error("Unkown data type inside condition. Cannot determine operation.");
+                        return false;
                 }
 
                 return true;
@@ -438,6 +489,10 @@ let recursive_descent = (function() {
             return false;
         },
 
+        /**
+         * Grammar rule: expression = ["+"|"-"] term {("+"|"-") term} | "call" ident;
+         * @returns data type of the expression on success, false otherwise
+         */
         expression: function() {
             // expression can be "result" of call, however to use statement_call, we must verify the "call" symbol
             if (this.symbol == Symbols.call) {
@@ -469,7 +524,7 @@ let recursive_descent = (function() {
             let loop_term_type;
             let operation;
 
-            // check if +/- operations are permitted with this data type
+            // check if +/- operations are permitted with this data type --- this should be repalced with map check now
             if (this.symbol == Symbols.minus)
                 if (term_type == Symbols_Input_Type.string || term_type == Symbols_Input_Type.boolean) {
                     this.error("'Expression' error. Cannot subtract strings and booleans. Type error: " + term_type);
@@ -483,7 +538,6 @@ let recursive_descent = (function() {
                 }
 
             while (this.accept(Symbols.plus) || this.accept(Symbols.minus)) {
-                // 2 = addition, 3 = subtraction
                 operation = this.last_symbol_value == Symbols.plus ? OPR.addition : OPR.subtraction;
 
                 if ((loop_term_type = this.term()) === false) {
@@ -523,6 +577,10 @@ let recursive_descent = (function() {
             return term_type;
         },
 
+        /**
+         * Grammar rule: term = ["~"] factor { ("*"|"/"|"&"|"|") ["~"] factor};
+         * @returns data type of the term on success, false otherwise
+         */
         term: function() {
             let inner_type;
 
@@ -585,6 +643,11 @@ let recursive_descent = (function() {
             return inner_type;
         },
 
+        /**
+         * Part of grammar rule: term = ["~"] factor { ("*"|"/"|"&"|"|") ["~"] factor};
+         * Specifically ["~"] factor
+         * @returns true on success, false on condition compilation failure
+         */
         term_inner: function() {
             let negate = false;
 
@@ -617,6 +680,10 @@ let recursive_descent = (function() {
             return factor_type;
         },
 
+        /**
+         * Grammar rule: factor = ident | value | "(" expression ")";
+         * @returns data type of the factor on success, false otherwise
+         */
         factor: function() {
             if (this.accept(Symbols.ident)) {
                 let v = this.get_variable_by_name(this.last_symbol_value);
@@ -670,6 +737,10 @@ let recursive_descent = (function() {
             return false;
         },
 
+        /**
+         * Decider for grammar rule: statement
+         * @returns true on success, false on failure, 10 on "end" (statement block end)
+         */
         statement: function() {
             switch (this.symbol) {
                 case Symbols.ident:

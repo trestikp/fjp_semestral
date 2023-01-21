@@ -99,9 +99,9 @@ factor = ident | number | "(" expression ")";
                   | "(" condition_expression ") ? " expression ":" expression
                   | "while" condition_expression "do" statement
                   | "for" expression "to" expression "do" statement
-                  | "return" expression;
+                  | "return" expression ];
 
-    condition_expression = ["~"] condition { ("&"|"|") ["~"] condition }
+    condition_expression = ["~"] condition { ("&"|"|") ["~"] condition } ;
 
     condition = "odd" expression |
                 expression ("="|"#"|"<"|"<="|">"|">=") expression ;

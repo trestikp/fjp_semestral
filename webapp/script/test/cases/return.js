@@ -1,13 +1,30 @@
 (function ($) {
-    let resultInstructions = []
+    let resultInstructions = [
+        ["0", "JMP", "0", "15"],
+        ["1", "JMP", "0", "3"],
+        ["2", "JMP", "0", "10"],
+        ["3", "INT", "0", "4"],
+        ["4", "LIT", "0", "1"],
+        ["5", "LIT", "0", "1"],
+        ["6", "OPR", "0", "2"],
+        ["7", "STO", "1", "3"],
+        ["8", "RET", "0", "0"],
+        ["9", "RET", "0", "0"],
+        ["10", "INT", "0", "4"],
+        ["11", "CAL", "0", "1"],
+        ["12", "LOD", "0", "3"],
+        ["13", "STO", "1", "4"],
+        ["14", "RET", "0", "0"],
+        ["15", "INT", "0", "5"],
+        ["16", "CAL", "0", "2"],
+        ["17", "RET", "0", "0"],
+    ]    
 
-    let inputCode = "var i;\n\nprocedure callMe;\n\tbegin\n\t\ti := i - 1;\n\t\tif i > 0 then call callMe;\n\tend;\n\nbegin\n\ti := 5;\n\tcall callMe;\n\n\t(* recursion DOES NOT WORK!!! - expected *)\nend.";
+    let inputCode = "var res;\n\nprocedure integer onePlusOne;\n\tbegin\n\t\treturn 1+1;\n\tend;\n\nprocedure assignOnePlusOne;\n\tbegin\n\t\tres := call onePlusOne;\n\tend;\n\nbegin\n\tcall assignOnePlusOne;\nend.";
 
 
     window.runTestCase = function() {
         Parser.parse(true, inputCode);
-
-        throw "Not implemented";
 
         TestRunner.validateInstructions(resultInstructions);
     }

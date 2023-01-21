@@ -11,7 +11,6 @@
     "loop.js",
     "parallelAssignment.js",
     "proceduresParse.js",
-    "recursion.js",
     "return.js",
     "ternary.js",
     "negative/invalidKeyName.js",

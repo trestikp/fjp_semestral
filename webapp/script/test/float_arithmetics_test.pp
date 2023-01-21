@@ -33,7 +33,7 @@ procedure mult;
 procedure div;
     var x: float;
     begin
-        x := 1;
+        x := 1.0;
         a := x / f; (* 10000 in a *)
         b := x / 3.0; (* 0.333 in b TODO: this results in 0 *)
     end;

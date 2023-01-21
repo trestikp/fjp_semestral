@@ -3,9 +3,6 @@
     let Parser = {};
 
     //Private constants
-    const CONSOLE_HEIGHT = 200;
-    const VALIDATION_TIMEOUT = 1000;
-
     const keywords = ["const", "procedure", "begin", "do", "while", "if", "then", "end", "call"];
     const typeKeywords = ["var", "string", "integer", "float", "boolean"]
     const operators = ["<=", "<", ">", ">=", "=", "odd"];
@@ -130,14 +127,15 @@
             value: "const m=7, n=85;\nvar x, y, z, q, r;\n\nprocedure nasobeni;\nvar a, b;\nbegin a := x; b:= y; z:=0;\n\twhile b > 0 do\n\tbegin\n\t\tif odd b then z := z + a;\n\t\t\ta := 2 * a; b := b / 2;\n\tend;\nend;\n\nprocedure deleni;\nvar w;\nbegin r:=x; q := 0; w:= y;\n\twhile w <= r do w := 2*w;\n\twhile w > y do\n\tbegin q:=2*q; w:=w/2;\n\t\tif w <= r\tthen\n\t\tbegin r:=r-w; q:=q+1;\n\t\tend;\n\tend;\nend;\n\nprocedure gcd;\nvar f, g;\nbegin f:=x; g:=y;\n\twhile f#g do\n\tbegin if f <g then g:=g-f;\n\t\tif g<f then f:=f-g;\n\tend;\n\tz := f;\nend;\nbegin\n\tx:=m; y:=n; call nasobeni;\n\ty:=25; y:=3; call deleni;\n\tx:=84; y:=36; call gcd;\nend.",
             language: 'mylang',
             theme: "mylang-theme-dark",
-            renderLineHighlight: "none"
+            renderLineHighlight: "none",
+            automaticLayout: true
         });
 
         var validationTimeoutHandle = null;
         editor.onDidChangeModelContent(() => {
           // debounce
           clearTimeout(validationTimeoutHandle);
-          validationTimeoutHandle = setTimeout(() => Parser.parse(true), VALIDATION_TIMEOUT);
+          validationTimeoutHandle = setTimeout(() => Parser.parse(true), Config.VALIDATION_TIMEOUT);
         });
     }
 
@@ -204,7 +202,7 @@
 
         // @ts-ignore 
         
-        middleEditor.style.maxHeight = Math.min(middleEditor.getBoundingClientRect().height, window.innerHeight - CONSOLE_HEIGHT) + "px";
+        middleEditor.style.maxHeight = Math.min(middleEditor.getBoundingClientRect().height, window.innerHeight - Config.DEFAULT_CONSOLE_HEIGHT) + "px";
     }
 
 
@@ -327,7 +325,8 @@
         }
 
         if (!debuggerReady) {
-            Parser.writeToTerm("Debugger is not ready.", "red");
+            Parser.error("Debugger is not ready, reloading.");
+            debuggerFrame.src = Config.DEBUGGER_IP;
             return;
         }
 
@@ -486,6 +485,7 @@
         if (data.target == "integration") {
             if (data.event == "READY") {
                 debuggerReady = true;
+                Parser.writeToTerm("Debugger successfuly connected", "green");
             } else if (data.event == "COMPILATION_ERROR") {
                 const parseErrors = data.data.parseErrors;
                 for (const errorIndex in parseErrors) {

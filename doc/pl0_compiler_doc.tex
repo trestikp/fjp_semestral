@@ -7,6 +7,10 @@
 \usepackage{float}
 \usepackage{graphicx}
 \usepackage{hyperref}
+
+\setcounter{secnumdepth}{4}
+\newcommand{\chapterRef}[1]{\ref{#1} \nameref{#1}}
+\newcommand{\myparagraph}[1]{\paragraph{#1}\mbox{}\\}
 %%%
 %%%
 \begin{document}
@@ -31,7 +35,7 @@
 Tomáš Linhart, Pavel Třeštík\\
 }
 {\normalsize
-Doplň své číslo, A22N0137P
+A22N0055P, A22N0137P
 }
 \end{center}
 \vspace{\fill}
@@ -307,6 +311,70 @@ vkládany řádky, každého kontextu, který je zrovna překládán a tedy kter
 udržuje několik \uv{flag} proměnných, které slouží ke správné funkci překladače.
 %
 \subsection{Grafické rozhraní}
+Grafické rozhraní je realizováno ve webovém prohlížeči za využití frameworků Bootstrap, Jquery a editoru kódu Monaco. Pro uživatele je přístupná pouze jedna webová stránka \textit{index.html}, která obsahuje kompletní editor. 
+
+Editor je realizován podobně jako aktuální moderní IDE. Obrazovka obsahuje horní lištu s ovládacími tlačítky, levý vstupní editor pro zápis kódu a pravý výstupní editor, ve kterém jsou obsaženy výstupní instrukce po kompilaci programu.
+
+\urldef{\urlD}\url{https://microsoft.github.io/monaco-editor/}
+Vstupní editor je realizován s využitím volně dostupné knihovny Monaco editor. \footnote{\url{https://microsoft.github.io/monaco-editor/}} Tato knihovna umožňuje vytvoření vlastního editoru s možností definice syntaxe vlastního programovacího jazyka a stylů. Pro tuto práci byla vytvořena zjednodušená verze syntaxe jazyka, která se využívá pro obarvení kódu a zobrazení dialogů s nápovědou programátorovi. Dále knihovna umožňuje pomocí funkce vkládat podtržení chyb a zobrazuje dialogové okno s detailním popisem chyby, pokud uživatel nad zvýrazněnou část kódu uživatel umístí kurzor myši.
+
+
+Užitečnou funkčnosti uživatelského rozhraní je automatická průběžná kompilace během psaní vstupního kódu. Výstupní kód a zprávy v konzoli nejsou během psaní nijak ovlivněny, ale uživatel již průběžně vidí podtrhané chybné úseky kódu s informací, co způsobuje jednotlivé chyby. Ve výchozím nastavení probíhá tato kontrola vždy 1000 milisekund po ukončení zadávání vstupu, ale tuto hodnotu je možné změnit pomocí konfiguračního souboru.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{img/gui.png}
+	\caption{Ukázka grafického rozhraní s chybovým dialogem a vygenerovanými instrukcemi}
+	\label{fig:GUI}
+\end{figure}
+
+\subsubsection{Ovládací prvky}
+Veškeré ovládací prvky jsou zobrazeny na horní ovládací liště, která je dále rozdělena na pravou a levou část. Nejčastěji používané ovládací prvky jsou umístěny v levé části. V následující části dokumentace jsou jednotlivé prvky zleva vyjmenovány a je popsána jejich funkčnost.
+
+\myparagraph{Nahrání souboru - ikona mráčku s šipkou nahoru}
+Toto tlačítko slouží pro načtení vstupního souboru z počítače uživatele. Povoleny jsou pouze soubory ve formátu \textit{.txt}. Před tím než uživatel vybere soubor je upozorněn, že tato akce smaže jeho aktuální kód. Po potvrzení vybere  soubor a ten je načten do vstupního okna.
+
+\myparagraph{Spuštění překladu - ikona přehrání}
+Stisktnuím tohoto tlačítka uživatel spustí překlad kódu z vstupního editoru. V případě, že je kód validní jsou do výstupního okna vloženy přeložené instrukce. Pokud ovšem kód obsahuje nějakou chybu, je tato chyba vypsána do konzole ve spodní části obrazovky a zároveň je kód způsobující chybu podtržen. Obsah ve výstupním okně zůstává nezměň, může obsahovat instrukce z předchozích korektních běhů.
+
+\myparagraph{Načtení příkladů - selectbox a tlačítko Load example}
+Pro uživatele bylo připraveno několik příkladů, které demonstrují funkčnosti vytvořeného programovacího jazyka. Ty lze načíst do vstupního okna kliknutím na selectbox a vybráním příslušného příkladu. Po stisknutí tlačítka Load example je bez zobrazení varování kód ve vstupním editoru nahrazený daným příkladem. Všechny příklady jsou funkční a obsahují například ukázku aritmetiky, podmínek a procedur.
+
+\myparagraph{Spuštění testů - tlačítko Run tests}\label{sec:testovaniTlacitko}
+Po stisknutí tlačítka je spuštěno automatické testování. Testovací případy jsou pomocí asynchronního volání načteny ze serveru a následě spuštěny. Uživateli je pak zobrazeno okno s výsledky testování, viz \chapterRef{sec:testovani}.
+
+\myparagraph{Přepnutí režimu - tlačítko sluníčko nebo měsíček}
+Tímto tlačítkem se přepíná mezi světlým a tmavým režimem editoru. Editor je ve výchozím stavu spuštěn v tmavém režimu, po stisknutí na tlačítko sluníčka je ikona a barva tohoto tlačítka změněna a je nahrazeno tmavé schéma editoru schématem světlým. Opětovným stisknutím stejného tlačítka se editor přepne opět na tmavé schéma.
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{img/gui_light.png}
+	\caption{Ukázka grafického rozhraní ve světlém režimu}
+	\label{fig:GUILight}
+\end{figure}
+
+\myparagraph{Skrytí a zobrazení konzole - ikona terminálu}
+Tlačítko slouží pro skrytí okna konzole. Po jejím skrytí je editor roztažen na celou výšku okna (kromě horní lišty). Výstupy z aplikace jsou do konzole stále vypisovány, po jejím zobrazení stisknutím stejného tlačítka uživatel vidí veškeré aktuální výpisy.
+
+\myparagraph{Zobrazení debuggeru - ikona brouka}
+Napojení na debugger lze spustit stisknutím tlačítka pro debug. Po stisknutí je výstupní kód automaticky odeslán do napojeného debuggeru a debugování je spuštěno. Okna editorů jsou nahrazeny připraveným debuggerem, pro opětovné otevření editorů je nutné stisknout stejné tlačítko. Okno spuštěného debuggeru nelze poté vyvolat zpět, lze ho pouze načíst od začátku stejným tlačítekm. Pokud je napojení na debugger nefunkční, je zobrazena chybová zpráva do konzole a uživateli zůstávají k dispozici okna editoru. Dále viz \chapterRef{sec:debugger}
+
+\myparagraph{Stažení kódu - ikona mráčku s šipkou dolů}
+Soubor obsahující výsledné instrukce lze stáhnout pomocí předposledního tlačítka na ovládací liště. Soubor s názvem \textit{outputCode.txt} obsahuje jednoduchý seznam výsledných instrukcí podobně jako ve výstupním okně editoru.
+
+\myparagraph{Zkopírování kódu - ikona psací podložky}
+Poslední ovládací tlačítko je alternativou ke stažení souboru. Výsledné instrukce jsou po stisknutí nakopírovány do schránky uživatele namísto stažení.
+
+\subsubsection{Napojení na debugger}\label{sec:debugger}
+Jako debugger je využita práce z minulých let pana Vlčka a Bartičky, pro informace pro spuštění a ovládání viz dokumentace anebo Github \footnote{\url{https://github.com/lukasvlc3k/fjp/tree/main/pl0}}. Pro integraci bylo nutné definovat jednoduchý protokol, kterým budou přenášeny informace mezi překladačem a debuggerem. Z tohoto důvodu bylo nutné debugger upravit tak, aby dokázal přečíst data z datové sběrnice a spustit jejich krokování. Debuggger je v překladači zobrazený jako Iframe na většině obrazovky, pro komunikaci je využito Message eventů \footnote{\url{https://developer.mozilla.org/en-US/docs/Web/API/Window/message_event}}, které umožňují předávání dat mezi IFrame a rodičovským oknem a naopak. 
+
+Při inicializaci očekává překladač zprávu \textit{READY}, která indikuje, že je debugger dostupný. Debugger tuto zprávu odešle po načtení a bez přijetí této zprávy není možné integraci na debugger využívat. Poté lze odesílat do debugger instrukce pomocí zprávy s identifikátorem \textit{debug}. Tato zpráva dále obsahuje instrukce, které debugger zpracuje a v případě, že je vše v pořádku a debugování je spuštěno, vrátí překladači zprávu \textit{DEBUGGER\_START}. Na tu zareaguje překladač a zobrazí okno s debuggerem uživateli. V případě, že dojde k chybě překladače a zašle do debuggeru instrukce, které nedokáže přečíst, odešle debugger překladači zprávu \textit{COMPILATION\_ERROR}, ve které se dále nachází jaké konkrétní instrukce způsobily chybu.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{img/debugger_integration.png}
+	\caption{Ukázka grafického rozhraní ve světlém režimu}
+	\label{fig:GUILight}
+\end{figure}
 %
 \section{Řešené problémy}
 Řešeno byla dlouhá řada problémů, různých složitostí. Například volání procedur je realizováno tak, že je vložena
@@ -332,11 +400,20 @@ proměnné. Řešením tedy je, že pro kontext se vytváří navíc proměnné,
 třeba ošetřit možnost noření cyklů a je tedy třeba počítat kolik pomocných proměnných pro \texttt{for} je 
 vlastně potřeba.
 %
-\section{Testování}
-To ti rád přenechám
+\section{Testování}\label{sec:testovani}
+Testování je spouštěno přímo z uživatelského rozhraní pomocí tlačítka, viz \chapterRef{sec:testovaniTlacitko}. Jednotlivé testy soubory s testy jsou uloženy v souboru \textit{tests.json}. Očekává se, že jeden testovací soubor odpovídá jednomu testovacímu případu. Po načtení souboru s testy pomocí AJAX volání jsou načteny jednotlivé testovací případy. Každý testovací případ vytvoří metodu \textit{runTestCase}, která představuje vstupní bod daného testu. Framework pro testování tuto metodu spustí, pokud dojde k chybě v testu, je to indikováno vyhozením výjimky. Testovací framework tuto výjimku zpracuje a data o s informacemi o chybě testu jsou zobrazeny uživateli v modálním okně. 
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{img/test_modal.png}
+	\caption{Ukázka modálního okna s výsledky testů}
+	\label{fig:TestModal}
+\end{figure}
+
+Pro práci bylo připraveno více jak 15 testovacích případů, které testují správnost lexeru a správnost vygenerovaných instrukcí, nebo správnost zobrazených chybových zpráv (negativní testy).
 %
 \section{Závěr}
-To bych ti klidně taky nechal :D
+Výsledkem práce je funkční webový překladač námi definovaného jazyka, který překládá vstupní kód na výstupní instrukce jazyka PL0. Překladač splňuje všechny základní body zadání, zároveň ale umožňuje zpracování pokročilých, bonusových, instrukcí. Pro používání veškerých funkcí překladače je připraveno webové rozhraní s využitím primárně jazyka HTML a JavaScript. Správná funkčnost překladače je ověřena pomocí několika testů. Překladač je napojený na mírně upravený debugger vytvořený studenty z předchozích let a umožňuje výstupní instrukce automaticky spouštět a ladit ve stejném okně. 
 %%%
 %%%
 \end{document}

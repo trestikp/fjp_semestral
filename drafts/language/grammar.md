@@ -91,7 +91,7 @@ factor = ident | number | "(" expression ")";
 
     statement = [ ident ":=" expression 
                   | "{" ident {, ident} "} := {" value{, value} "}" 
-                  | "call" ident
+                  | "call" ident ["(" expression {"," expression } ")"]
                   | "?" ident
                   | "!" expression 
                   | "begin" statement {";" statement } "end" 

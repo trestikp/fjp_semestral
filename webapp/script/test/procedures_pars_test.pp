@@ -1,5 +1,5 @@
 const a1 = 5;
-var resFloat1: float, resInt1, resInt2, resNestInt, resFail;
+var resFloat1: float, resInt1, resInt2, resNestInt;
 
 procedure test;
     begin
@@ -52,5 +52,5 @@ begin
     resInt1 := call paramReturnTest(a1, 3.0, true); (* Int1 = 30 *)
     resInt2 := call paramReturnTest(a1, 3.0, false); (* Int2 = 10 *)
     resNestInt := call nestTest(17); (* 30 *)
-    resFail := call innerNestTest(7); (* TODO: it compiles and even runs.. 20 - but shouldn't compile! *)
+    (* resFail := call innerNestTest(7); // 20 - but shouldn't compile because its out of scope! this is a negative test *)
 end.

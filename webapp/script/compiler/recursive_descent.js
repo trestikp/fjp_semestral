@@ -938,9 +938,9 @@ let recursive_descent = (function() {
          * Pushes new context object to "context_list". Context must contain name and adress. Optionally context return
          * type if present.
          */
-        push_context: function(c_name, c_address, c_return_type = null, c_par_count = 0, c_var_count = 0) {
+        push_context: function(c_name, c_address, c_return_type = null, c_level = 0, c_par_count = 0, c_var_count = 0) {
             console.log("adding context: " + c_name);
-            this.context_list.push({c_name, c_address, c_return_type, c_par_count, c_var_count});
+            this.context_list.push({c_name, c_address, c_return_type, c_level, c_par_count, c_var_count});
             return this.context_list[this.context_list.length - 1];
         },
 
@@ -1162,7 +1162,7 @@ let recursive_descent = (function() {
             }
             
             // block
-            let current_context = this.push_context(ident_name, -1, return_type, param_count);
+            let current_context = this.push_context(ident_name, -1, return_type, this.level_counter, param_count);
             let block_start = 0;
             if ((block_start = this.block(params)) === false) {
                 this.error("Failed to compile procedure (" + ident_name + ") body.");
@@ -1319,6 +1319,14 @@ let recursive_descent = (function() {
                 return false;
             }
 
+            let context = this.context_list[context_index];
+
+            if (context.c_level > (this.level_counter + 1)) { // its inverse (nested context hash higher level)
+                this.error("Cannoc call procedure: " + context.c_name + 
+                           " because it cannot be found in current scope.");
+                return false;
+            }
+
             /*
                 resolve parameters before call - should result in
                 stack: 
@@ -1328,8 +1336,7 @@ let recursive_descent = (function() {
                     ...
                     new stack frame (call)
             */
-
-            let context = this.context_list[context_index];
+            
             if (this.accept(Symbols.open_bra)) {
                 let i = 0;
 

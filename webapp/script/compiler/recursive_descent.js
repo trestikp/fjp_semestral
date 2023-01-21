@@ -278,7 +278,6 @@ let recursive_descent = (function() {
         accept: function(sym) {
             if (this.symbol === sym) {
                 this.next_sym();
-                // console.log("Accepted symbol: " + this.symbol + ", text: " + tokenizer.yytext); // debug only
                 return true;
             }
     
@@ -966,7 +965,6 @@ let recursive_descent = (function() {
             // must push in reverse to keep correct order when pushing to start
             for (let i = (this.context_list.length - 1); i >= 0; i--) {
                 push_instruction_to_start(Instructions.JMP, 0, this.context_list[i].c_address);
-                console.log("%d pushing %s", i, this.context_list[i].c_name);
             }
 
             // all jumps must be offset by |context_list|, because those instructions are inserted to start offseting all other instructions
@@ -988,7 +986,6 @@ let recursive_descent = (function() {
          * type if present.
          */
         push_context: function(c_name, c_address, c_return_type = null, c_level = 0, c_par_count = 0) {
-            console.log("adding context: " + c_name);
             this.context_list.push({c_name, c_address, c_return_type, c_level, c_par_count});
             return this.context_list[this.context_list.length - 1];
         },

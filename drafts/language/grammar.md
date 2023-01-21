@@ -81,7 +81,7 @@ factor = ident | number | "(" expression ")";
 
     factor = ident | number | value | "(" expression ")";
 ```
-## Grammar fixed up (fixes for errors discovered during implementation)
+## Grammar fixed up (fixes for errors discovered during implementation) - final version
 ```
     program = block "." ;
 

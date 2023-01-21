@@ -43,6 +43,6 @@ TURN-IN CHECKLIST:
 - [ ] multiple assignment --- CANCELED
 - [x] parallel assignment
 - [x] expression priority with - tried with booleans, seems to work (TODO: test other data types)
-- [ ] parameters? (not even done)
+- [x] parameters
 - [x] ternary - its useless, cannot be used to assign values to variables... basically if with different syntax
 - [x] AND, OR, NEG (in some basic form)

@@ -45,16 +45,298 @@ Doplň své číslo, A22N0137P
 %%% TEXT START
 %%%
 \section{Úvod}
+Cílem této práce bude implementovat překladač z \uv{vysoko úrovňového jazyka} PL/0 do příslušných instrukcí. Jazyk PL/0
+je založen nad syntaxí podobající se jazyku Pascal. Avšak PL/0 je značně omezen v poskytujících funkcí a je velmi 
+zjednodušen, aby bylo snadné ho použít pro výuku formálních jazyků a překladačů.
+
+K jazyku existují také vlastní instrukce, kterými lze popsat jednoduché výpočetní zařízení. Instrukce fungují na 
+principu zásobníkového automatu, tedy všechny instrukce přidávají a ubírají data na zásobníku. Například součet dvou
+čísel funguje tak, že se na zásobník nejdříve vloží 2 čísla a pak se zavolá instrukce, která vyjme 2 hodnoty na vrcholu
+zásobníku a zpět vloží jejich sumu. Instrukce mají vždy 2 parametry, které ale nemusí mít pro instrukci význam.
+
+V předchozích letech tohoto předmětu byl vytvořen online interpret takovýchto instrukcí. V rámci předmětu byly také 
+vytvořeny překladače pro tento jazyk, avšak tyto překladače jsou buď zastaralé a nebo nejdou spustit online. Cílem 
+této práce je vytvořit překladač, který bude provozován online a nevyžaduje běžící backendovou aplikaci. Ze zadání
+jsou na překladač kladeny požadavky na vlastnoti, které musí překládaný jazyk (a tedy i překladač) podporovat. Tyto 
+požadavky nejsou částí původní gramatiky jazyka PL/0 a proto je třeba ho rozšířit. Zároveň je ale chtěné zachovat
+zpětnou kompatibilitu s jazykem PL/0, což může omezovat náš nový jazyk, který PL/0 rozšiřuje.
 %
 \section{Analýza}
+Překladač má být online aplikace, která nesmí mít backendovou část, která by běžela na serveru. Z tohoto důvodu byl
+pro implementaci překladače navrhnut jazyk JavaScript, protože to je populární jazyk pro implementaci webových aplikací,
+a je možné v něm naprogramovat plně \uv{client-side} překladač.
+
+\hfill \break
+\noindent Funkce jazyka, které jazyk musí podporovat jsou následující:
 %
-\section{Implementace}
+\begin{itemize}
+    \item definice celočíselných proměnných
+    \item definice celočíselných konstant
+    \item základní aritmetiku a logiku (+, -, *, /, AND, OR, negace a závorky, operátory pro porovnání čísel)
+    \item cyklus (libovolný)
+    \item jednoduchou podmínku (if bez else)
+    \item definice podprogramu (procedura, funkce, metoda) a jeho volání
+\end{itemize}
+%
+\noindent Funkce jazyka, které nejsou požadovaným minimem, ale byly zvoleny pro dosažení bodů nutných ke splnění práce:
+%
+\begin{itemize}
+    \item každý další typ cyklu (for, do .. while, while .. do, repeat .. unitl, foreach pro pole)
+    \item else větev
+    \item datový typ boolean a logické operace s ním
+    \item datový typ real (s celočíselnými instrukcemi)
+    \item podmíněné přiřazení / ternární operátor (min = (a $<$ b) ? a : b;)
+    \item paralelní přiřazení ({a, b, c, d} = {1, 2, 3, 4};)
+    \item parametry předávané hodnotou
+    \item návratová hodnota podprogramu
+\end{itemize}
+
+Překlače je možno implementovat různými způsoby. Mezi hlavní 2, které se učí v tomto předmětu, patří implementace pomocí
+zásobníkového automatu a nebo pomocí takzvaného rekurzivního sestupu. Implementace pomocí zásobníkového automatu může
+být jednodušší, protože existují nástroje, pro které stačí definovat tokeny jazyka a jeho gramatiku a tyto nástroje
+následně vygenerují automat, který jazyk překladá. Do automatu se akorát doplní logika generující instrukce. Na druhou
+stranu rekurzivní sestup je více v rukou programátora. Výhodou rekurzivního sestupu tedy je, že programátor si může
+překladač více řídit sám. Nevýhodou je, že implementace je časově dělší, náročnější na práci a také může být složitější
+optimalizovat výsledné instrukce, než to je u zásobníkového automatu.
+%
+\subsection{Gramatika jazyka}
+% why did \url{} refused to work in \footnote{}??? it used to work just fine, but this is workaround
+\urldef{\urlA}\url{https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form}
+Jak již bylo zmíněno, gramatika jazyka této práce výchází z PL/0 a musí na PL/0 zachovat zpětnou kompatibilitu.
+PL/0 má následující gramatiku (v EBNF
+\footnote{Extended Backus-Naur form - \urlA}):
+%
+\begin{lstlisting}[caption=Originální PL/0 gramatika, captionpos=b]
+program = block "." ;
+
+block = [ "const" ident "=" number 
+          {"," ident "=" number} ";"]
+        [ "var" ident {"," ident} ";"]
+        { "procedure" ident ";" block ";" } statement ;
+
+statement = [ ident ":=" expression 
+              | "call" ident 
+              | "?" ident 
+              | "!" expression 
+              | "begin" statement {";" statement } "end" 
+              | "if" condition "then" statement 
+              | "while" condition "do" statement ];
+
+condition = "odd" expression |
+        expression ("="|"#"|"<"|"<="|">"|">=") expression ;
+
+expression = [ "+"|"-"] term { ("+"|"-") term};
+
+term = factor {("*"|"/") factor};
+
+factor = ident | number | "(" expression ")";
+\end{lstlisting}
+%
+Tato gramatika téměř splňuje minimální zadání práce. Chybí v ní akorát logické operátory. Gramatiku tedy stačí rozšířit
+vybrané funkce. Tyto funkce byly záměrně vybrány tak, aby byly do gramatiky snadno dodělatelné. Návrh výsledné gramatiky
+vypadá následovně:
+\begin{lstlisting}[caption=Navržená gramatika rozšiřující PL/0, captionpos=b]
+program = block "." ;
+
+block = [ "const" ident [":" data_type] "=" 
+          value {"," ident [":" data_type] "=" value} ";"]
+        [ "var" ident [":" data_type] 
+          {"," ident [":" data_type]} ";"]
+        { "procedure" ident [ "(" ident [ : data_type ] 
+          {"," ident [ : data_type ]} ")" ] ";" block ";" } 
+          statement ;
+
+statement = [ ident ":=" {ident ":="} expression 
+                | "{" ident {, ident} "} := 
+                  {" value{, value} "}" 
+                | "call" ident
+                | "?" ident
+                | "!" expression 
+                | "begin" statement {";" statement } "end" 
+                | "if" condition "then" statement 
+                  [ "else" statement ]
+                | "(" condition ") ? " "return" statement 
+                  ":" "return" statement
+                | "while" condition "do" statement
+                | "for" number "to" number "do" statement
+                | "return" value; ]
+
+condition = "odd" expression |
+            expression ("="|"#"|"<"|"<="|">"|">=") expression ;
+
+expression = [ "+"|"-"] term { ("+"|"-") term};
+
+term = factor {("*"|"/") factor};
+
+factor = ident | number | value | "(" expression ")";
+\end{lstlisting}
+%
+\section{Realizace}
+\urldef{\urlB}\url{https://github.com/zaach/jison-lex}
+Jak bylo navrženo v analýze, tak překladač byl implementován v jazyce JavaScript. Pro implementaci překladače byl
+zvolen rekurzivní sestup. Pro parsování kódu jazyka na tokeny byl použit nástroj \textbf{jison-lex}
+\footnote{jison-lex - \urlB}, což je JavaScript alternativa nástroje \textbf{lex}, který je učen v tomto předmětu.
+
+Při realizaci bylo zjištěno několik chyb v gramatice, a navrženou gramatiku bylo třeba ještě doupravit, aby bylo
+možné implementovat vybrané vlastnoti jazyka. Finální verze gramatiky vypadá následovně:
+%
+\begin{lstlisting}[caption=Finální gramatika, captionpos=b]
+program = block "." ;
+
+block = [ "const" ident [":" data_type] "=" 
+          value {"," ident [":" data_type] "=" value} ";"]
+        [ "var" ident [":" data_type] 
+          {"," ident [":" data_type]} ";"]
+        { "procedure" [data_type] ident [ "(" ident 
+          [ : data_type ] {"," ident [ : data_type ]} ")" ]
+          ";" block ";" } statement ;
+
+statement = [ ident ":=" expression 
+                | "{" ident {, ident} "} := 
+                  {" value{, value} "}" 
+                | "call" ident
+                | "?" ident
+                | "!" expression 
+                | "begin" statement {";" statement } "end" 
+                | "if" condition_expression 
+                  "then" statement 
+                  [ "else" statement ]
+                | "(" condition_expression ") ? 
+                  " expression ":" expression
+                | "while" condition_expression 
+                  "do" statement
+                | "for" expression "to" expression 
+                  "do" statement
+                | "return" expression; ]
+
+condition_expression = ["~"] condition 
+                       { ("&"|"|") ["~"] condition }
+
+condition = "odd" expression |
+            expression ("="|"#"|"<"|"<="|">"|">=") 
+            expression ;
+
+expression = ["+"|"-"] term {("+"|"-") term} | "call" ident;
+
+term = ["~"] factor { ("*"|"/"|"&"|"|") ["~"] factor};
+
+factor = ident | value | "(" expression ")";
+\end{lstlisting}
+%
+\subsection{Rekurzivní sestup}
+Jison-lex vytváří skript, který parsuje vstup a podle specifikovaných regexů vrací tokeny. Rekurzivní sestup 
+implementuje 2 funkce, které z lexu podávají tokeny. První je \textbf{next\_sym()}, která načte další symbol (token) z
+lexu. Druhá je \textbf{bool accept(symbol)}, která zavolá \textbf{next\_sym()} a poté porovná, zda-li načtený symbol je 
+rovný parametru. Tímto lze ověřit, že je načten správný token, když je očekáván. Pokud \textbf{accept()} vrátí false,
+tak byl načten neočekávaný vstup a překladač se může rozhodnout, jak pokračovat - ačkoliv v této práci vždy vede
+k chybě překladu.
+
+Rekurzivní sestup je potom implementován po vzoru gramatiky. Vstupním bodem překladače je funkce \textbf{program()},
+která po vzoru gramatiky volá funkci \textbf{block()} a následně \textbf{accept(Symbols.dot)}. Tedy všechny neterminální
+symboly gramatiky jsou funkcemi v implementaci a na všechny terminální symboly je volána funkce \textbf{accept()} v 
+těchto funkcích. Tyto funkce jsou nakonec rozšířeny o logiku, která jim umožňuje generovat výsledné instrukce.
+Příkladem takovéto funkce je například pravidlo \texttt{statement = "while"\\ condition\_expression "do" statement}:
+% 
+% WTF https://www.overleaf.com/learn/latex/Code_listing supports TON of obscure languages but no JavaScript....
+\begin{lstlisting}[caption=statement\_while příklad bez logiky, captionpos=b]
+  statement_while: function() {
+    // while verified by caller
+    this.accept(Symbols.while);
+
+    if (!this.condition_expression()) {
+      this.error("Failed to compile while condition.");
+      return false;
+    }
+
+    if (!this.accept(Symbols.do)) {
+      this.error("Expected 'do' before while statement.");
+      return false;
+    }
+
+    if (!this.statement()) {
+      this.error("Failed to compile while statement.");
+      return false;
+    }
+
+    return true;
+  }
+\end{lstlisting}
+%
+\hfill \break
+Po rozšíření o logiku pro generování instrukcí, které plní funkci \texttt{while} pak vypadá následovně:
+\begin{lstlisting}[caption=statement\_while příklad s logikou, captionpos=b]
+  statement_while: function() {
+    // while verified by caller
+    this.accept(Symbols.while);
+
+    let while_start_addr = instruction_list.length;
+
+    if (!this.condition_expression()) {
+      this.error("Failed to compile while condition.");
+      return false;
+    }
+
+    push_instruction(Instructions.JMC, 0, 0);
+    let while_end = instruction_list[instruction_list.length - 1];
+
+    if (!this.accept(Symbols.do)) {
+      this.error("Expected 'do' before while statement.");
+      return false;
+    }
+
+    if (!this.statement()) {
+      this.error("Failed to compile while statement.");
+      return false;
+    }
+
+    push_instruction(Instructions.JMP, 0, while_start_addr);
+    while_end.par2 = instruction_list.length;
+
+    return true;
+  }
+\end{lstlisting}
+%
+\urldef{\urlC}\url{https://en.wikipedia.org/wiki/Symbol_table}
+Samozřejmě překladač drží více logiky, než pouze jednoduché generování instrukcí jako v příkladu \texttt{while}. Některé
+funkce reprezentující gramatiku souvisí s jinými a je třeba něják tyto souvislosti udržovat, aby se daly využívat všude,
+kde jsou potřeba. Příkladem tohoto je tabulka symbolů\footnote{Tabulka symbolů - \urlC}. Ta udržuje informace o všech identifikátorech v
+programu - tedy názvech proměnných, konstant či funkcí. V této práci jsou tyto informace také udržovány, ale nejsou v
+jednotné tabulce. Práce rozděluje tabulka hlavně na 2 části. První je list identifikátorů procedur a informací o 
+proceduře (jako například návratový typ, pokud nějáký má). Druhou je \uv{matice} idetifikátorů proměnných, do které jsou
+vkládany řádky, každého kontextu, který je zrovna překládán a tedy které proměnné jsou zrovna dostupné. Sestup také 
+udržuje několik \uv{flag} proměnných, které slouží ke správné funkci překladače.
+%
+\subsection{Grafické rozhraní}
 %
 \section{Řešené problémy}
+Řešeno byla dlouhá řada problémů, různých složitostí. Například volání procedur je realizováno tak, že je vložena
+instrukce \textbf{CAL 0 par}, kde \textbf{par} je index v listu kontextů. Index odpovídá instrukci, na který je nalezena
+instrukce \textbf{JMP 0 x}, která skočá na tělo procedury. Toho je docíleno tak, že po vygenerování všech instrukcí jsou
+na začátek seznamu instrukcí vloženy instrukce \textbf{JMP} tak, aby odpovídaly indexům listu kontextů. Následkem tohoto
+vložení je potom nutné všechny skokové instrukce posunout o počet vložených instrukcí. Problém byl takto řešen, protože
+takto byly realizovány volání v příkladech na cvičení předmětu. Možná lepším řešením by ale mohlo být do instrukcí 
+\textbf{CAL} rovnou doplňovat instrukci začínající tělo procedury, protože tato informace je udržována. Ušetřilo by
+se tím vkládání na začátek listu a iterování celého listu, ovšem za cenu přehlednosti. Takto je zřejmé, že je volána
+procedura a navíc díky indexům, který odpovídají pořadí překládání procedur, lze odhadnou, která procedura je volána.
+
+Dalším příkladem problému je rozdílné pořadí operací online interpretu, pro který je překladač zaměřen. Překladač byl
+implementován s použitím \uv{manuálu}\footnote{\url{https://usermanual.wiki/Pdf/PL020Users20Manual.15518986/help}},
+ovšem během testování bylo zjištěno, že několik operací neodpovídá manuálu. Z interpretu poté bylo zjištěno, že pro
+některé operace používá jiné čísla. Tento problém není problém implementační, ale stále způsobil značnou ztrátu času.
+
+Mezi opravdu těžké problémy by pak patřila například implementace \texttt{for} cyklu. \texttt{for} cyklus vezme 
+výsledky dvou výrazů a z nich vypočte počet itercí, a poté iteruje do 0. Alespoň takto je navržen \texttt{for} cyklus
+této práce. Implementovat ho ale bylo těžké, protože PL/0 instrukce nemají žádný způsob pro kopírování hodnot na 
+vrcholu zásobníku či zjištění ukazatele na vrcho zásobníku. Kvůli tomuto nešlo cyklus implementovat bez pomocné 
+proměnné. Řešením tedy je, že pro kontext se vytváří navíc proměnné, pokud obsahuje \texttt{for} cyklus. Navíc bylo
+třeba ošetřit možnost noření cyklů a je tedy třeba počítat kolik pomocných proměnných pro \texttt{for} je 
+vlastně potřeba.
 %
 \section{Testování}
+To ti rád přenechám
 %
 \section{Závěr}
+To bych ti klidně taky nechal :D
 %%%
 %%%
 \end{document}

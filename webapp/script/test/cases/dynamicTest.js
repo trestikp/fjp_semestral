@@ -11,7 +11,9 @@
         Symbols_Input_Type.integer, Symbols_Input_Type.string, Symbols_Input_Type.boolean, Symbols_Input_Type.float,
         Symbols_Input_Type.float, Symbols_Input_Type.string, Symbols_Input_Type.integer, Symbols_Input_Type.float];
 
-
+    /**
+     * Main test method. Throws exception with information if the test fails.
+     */
     window.runTestCase = function() {
         tokenizer.setInput(test_string_dynamic);
         let symbol;

@@ -99,7 +99,9 @@
 
     let inputCode = "var res;\n\nbegin\n\tres := 0;\n\n(* +1 *)\nif 1 = 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1000 *)\n\tif 1 # 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1000 *)\n\tif 1 < 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1 *)\n\tif 1 <= 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1000 *)\n\tif 1 > 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\t(* +1 *)\n\tif 1 >= 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\n\tif odd 1 then res := res + 1;\n\t\t\t else res := res + 1000;\n\n\t(* expected res value: 3004*)\nend.";
 
-
+    /**
+     * Main test method. Throws exception with information if the test fails.
+     */
     window.runTestCase = function() {
         Parser.parse(true, inputCode);
 

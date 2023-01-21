@@ -4,6 +4,9 @@ darkIcon.classList.add("bi", "bi-brightness-high");
 const lightIcon = document.createElement("i");
 lightIcon.classList.add("bi", "bi-moon-fill");
 
+/**
+ * Event listener to correctly handle change of light and dark mode
+ */
 window.addEventListener("load", function() {
     const modeSwitchButton = document.querySelector("#switchModeBtn");
     modeSwitchButton?.addEventListener("click", function() {

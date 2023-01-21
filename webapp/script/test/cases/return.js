@@ -22,7 +22,9 @@
 
     let inputCode = "var res;\n\nprocedure integer onePlusOne;\n\tbegin\n\t\treturn 1+1;\n\tend;\n\nprocedure assignOnePlusOne;\n\tbegin\n\t\tres := call onePlusOne;\n\tend;\n\nbegin\n\tcall assignOnePlusOne;\nend.";
 
-
+    /**
+     * Main test method. Throws exception with information if the test fails.
+     */
     window.runTestCase = function() {
         Parser.parse(true, inputCode);
 

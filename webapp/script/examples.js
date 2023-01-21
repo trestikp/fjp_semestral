@@ -1,6 +1,9 @@
 (function ($) {
     let Examples = {};
 
+    /**
+     * List of example codes that might be loaded from the UI
+     */
     let ExampleOptions = {
         "Boolean": 'const t: boolean = true, tt: boolean = true, f: boolean = false, ff: boolean = false;\nvar res0p, res0n, res1, res2, res3, res4;\n\nprocedure ineqAndEq;\n\tbegin\n\t\tif t = t\tthen res0p := res0p + 1;\n\t\tif t = tt   then res0p := res0p + 10;\n\t\tif t = f\tthen res0p := res0p + 100;\n\t\tif t = true then res0p := res0p + 1000;\n\n\t\tif f = f\t then res0p := res0p + 1;\n\t\tif f = ff\tthen res0p := res0p + 10;\n\t\tif f = t\t then res0p := res0p + 100;\n\t\tif f = false then res0p := res0p + 1000;\n\n\t\tif true  = true  then res0p := res0p + 10000;\n\t\tif false = false then res0p := res0p + 10000;\n\t\tif true  = false then res0p := res0p + 10000;\n\t\tif false = true  then res0p := res0p + 10000;\n\n\t\tif t # t\tthen res0n := res0n + 1;\n\t\tif t # tt   then res0n := res0n + 10;\n\t\tif t # f\tthen res0n := res0n + 100;\n\t\tif t # true then res0n := res0n + 1000;\n\n\t\tif f # f\t then res0n := res0n + 1;\n\t\tif f # ff\tthen res0n := res0n + 10;\n\t\tif f # t\t then res0n := res0n + 100;\n\t\tif f # false then res0n := res0n + 1000;\n\n\t\tif true  # true  then res0n := res0n + 10000;\n\t\tif false # false then res0n := res0n + 10000;\n\t\tif true  # false then res0n := res0n + 10000;\n\t\tif false # true  then res0n := res0n + 10000;\n\n\t\t(* expected p = 22022, n = 20200 *)\n\tend;\n\nprocedure negation;\n\tvar tmp: boolean;\n\tbegin\n\t\ttmp := ~f;\n\t\tif tmp = true then res1 := res1 + 1;\n\t\ttmp := ~t;\n\t\tif tmp = true then res1 := res1 + 10;\n\n\t\t(* expected result 1 *)\n\tend;\n\nprocedure and;\n\tvar tmp: boolean;\n\tbegin\n\t\ttmp := t & t;\n\t\tif tmp = true then res2 := res2 + 1;\n\t\ttmp := t & f;\n\t\tif tmp = true then res2 := res2 + 10;\n\t\ttmp := f & f;\n\t\tif tmp = true then res2 := res2 + 100;\n\t\ttmp := f & t;\n\t\tif tmp = true then res2 := res2 + 1000;\n\t\ttmp := t & ~f;\n\t\tif tmp = true then res2 := res2 + 10000;\n\n\t\t(* expected result 10001 *)\n\tend;\n\nprocedure or;\n\tvar tmp: boolean;\n\tbegin\n\t\ttmp := t | t;\n\t\tif tmp = true then res3 := res3 + 1;\n\t\ttmp := t | f;\n\t\tif tmp = true then res3 := res3 + 10;\n\t\ttmp := f | f;\n\t\tif tmp = true then res3 := res3 + 100;\n\t\ttmp := f | t;\n\t\tif tmp = true then res3 := res3 + 1000;\n\t\ttmp := t | ~f;\n\t\tif tmp = true then res3 := res3 + 10000;\n\t\ttmp := ~t | f;\n\t\tif tmp = true then res3 := res3 + 100000;\n\n\t\t(* expected result 011011 *)\n\tend;\n\nprocedure complex;\n\tbegin\n\t\tif t | f & f | f = true then res4 := res4 + 1;\n\t\tif t | f & ~(f | f) = true then res4 := res4 + 10;\n\t\tif t | f & ~(f | f) & tt | ff = true then res4 := res4 + 100;\n\n\t\t(* expected result 110 *)\n\tend;\n\nbegin\n\tcall ineqAndEq;\n\tcall negation;\n\tcall and;\n\tcall or;\n\tcall complex;\nend.',
         "Condition Concating": "const a = 5, b = 5, c = 8, d = 5;\nvar res1, res2, res3, res4;\n\nprocedure negation;\n\tbegin\n\t\tres1 := 0;\n\t\t(* false *)\n\t\tif ~ a = b \n\t\t\tthen res1 := res1 + 1;\n\t\t(* false *)\n\t\tif ~a = b \n\t\t\tthen res1 := res1 + 1;\n\t\t(* true *)\n\t\tif ~a = c\n\t\t\tthen res1 := res1 + 1;\n\n\t\t(* expects res = 1 *)\n\tend;\n\nprocedure and;\n\tbegin\n\t\tres2 := 0;\n\t\t(* true *)\n\t\tif a = b & b = d \n\t\t\tthen res2 := res2 + 1;\n\t\t(* false *)\n\t\tif a = b & ~b = d \n\t\t\tthen res2 := res2 + 1;\n\t\t(* false *)\n\t\tif ~a = b & b = d \n\t\t\tthen res2 := res2 + 1;\n\t\t(* true *)\n\t\tif a = b & ~b = c\n\t\t\tthen res2 := res2 + 1;\n\n\t\t(* expects res = 2 *)\n\tend;\n\nprocedure or;\n\tbegin\n\t\tres3 := 0;\n\t\t(* true *)\n\t\tif a = b | b = d \n\t\t\tthen res3 := res3 + 1;\n\t\t(* true *)\n\t\tif a = b | ~b = d \n\t\t\tthen res3 := res3 + 1;\n\t\t(* true *)\n\t\tif ~a = b | b = d \n\t\t\tthen res3 := res3 + 1;\n\t\t(* false *)\n\t\tif a = c | b = c\n\t\t\tthen res3 := res3 + 1;\n\n\t\t(* expects res = 3 *)\n\tend;\n\nprocedure complex;\n\tbegin\n\t\tres4 := 0;\n\t\t(* true *)\n\t\tif a = b & b = d & ~b = c | c = d\n\t\t\tthen res4 := res4 + 1;\n\t\t(* true *)\n\t\tif a = c & b = c | ~c = d\n\t\t\tthen res4 := res4 + 1;\n\t\t(* false *)\n\t\tif a = c & b = c | c = d\n\t\t\tthen res4 := res4 + 1;\n\n\t\t(* expects res = 2 *)\n\tend;\n\nbegin\n\tcall negation;\n\tcall and;\n\tcall or;\n\tcall complex;\nend.",
@@ -30,6 +33,9 @@
     //                  Initialize functions 
     //=======================================================
 
+    /**
+     * Initialize the selector with data from the examples above
+     */
     function initExampleSelector() {
         let exampleSelector = document.getElementById("exampleSelector");
 
@@ -46,6 +52,9 @@
     //                  Public methods
     //=======================================================
 
+    /**
+     * Loads selected example into the input editor
+     */
     Examples.loadExample = function() {
         const key = document.getElementById("exampleSelector").value;
 

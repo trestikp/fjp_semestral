@@ -16,7 +16,9 @@
         Symbols.gt, Symbols.plus, Symbols.minus, Symbols.star, Symbols.slash, Symbols.comment_start, Symbols.comment_end];
 
 
-
+    /**
+     * Main test method. Throws exception with information if the test fails.
+     */
     window.runTestCase = function() {
         tokenizer.setInput(test_string_static);
         let symbol;

@@ -1,12 +1,18 @@
 let lastMoveY;
 let lastMoveX;
 
+/**
+ * Initialize events for resizing the editor windows
+ */
 window.addEventListener("load", function() {
     createResizeTerminal();
     createResizeEditor();
     createResizeWindowListener();
 });
 
+/**
+ * Create listener that resets the correct editor window sizes after browser window resize.
+ */
 function createResizeWindowListener() {
     window.addEventListener("resize", function() {
         if (lastMoveX) {
@@ -19,6 +25,9 @@ function createResizeWindowListener() {
     })
 }
 
+/**
+ * Add mouse event listeners for vertical resizing
+ */
 function createResizeTerminal() {
     let resize = document.querySelector("#resizeTerminal");
     let editor = document.querySelectorAll(".editor");
@@ -49,6 +58,11 @@ function createResizeTerminal() {
     })
 }
 
+/**
+ * Sets correct styles to the console window and the editor windows
+ * 
+ * @param {Number} moveY Y coordinate of the top of the console window
+ */
 function setMoveY(moveY) {
     let down = document.querySelector(".terminal");
     let middleEditor = document.querySelector(".middle-editor");
@@ -58,6 +72,9 @@ function setMoveY(moveY) {
     middleEditor.style.maxHeight = moveY - document.getElementsByTagName("nav")[0].getBoundingClientRect().height - resize.getBoundingClientRect().height / 2 + "px";
 } 
 
+/**
+ * Add mouse event listeners for horizontal resizing
+ */
 function createResizeEditor() {
     let resize = document.querySelector("#resize");
     let left = document.querySelector(".left");
@@ -84,6 +101,11 @@ function createResizeEditor() {
     });
 }
 
+/**
+ * Sets correct styles for left and right editor windows
+ * 
+ * @param {Number} moveX size of the left window
+ */
 function setMoveX(moveX) {
     let resize = document.querySelector("#resize");
     let left = document.querySelector(".left");

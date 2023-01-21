@@ -1,6 +1,8 @@
 (function ($) {
+    //Public namespace object
     let Parser = {};
 
+    //Private constants
     const CONSOLE_HEIGHT = 200;
     const VALIDATION_TIMEOUT = 1000;
 
@@ -39,6 +41,10 @@
     //                  Initialize functions 
     //=======================================================
 
+    /**
+     * Function to properly initialize input Monaco editor. 
+     * This editor is used to highlight the text and underline errors.
+     */
     function initMonacoEditor() {
         monaco.languages.register({
             id: 'mylang'
@@ -441,6 +447,11 @@
         Parser.writeToTerm(errText, "red");
     } 
 
+    /**
+     * Ses the theme of the Monaco editor according to the input parameter
+     *
+     * @param {Number} mode 0 = dark mode; 1 = light mode
+     */
     Parser.setMonacoMode= function(mode) {
         if (mode == 0) {
             monaco.editor.setTheme("mylang-theme-dark");
@@ -449,6 +460,11 @@
         }
     }
 
+    /**
+     * Sets the input value in the input editor
+     * 
+     * @param {String} value Input value
+     */
     Parser.setInputValue = function(value) {
         editor.setValue(value);
     }

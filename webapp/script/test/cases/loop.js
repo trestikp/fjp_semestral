@@ -57,7 +57,9 @@
 
     let inputCode = "const upper = 8;\nvar res1, res2;\n\nprocedure testWhile;\n\tvar i;\n\tbegin\n\t\ti := 0;\n\t\twhile i < upper do\n\t\t\ti := i + 1;\n\t\tres1 := i;\n\tend;\n\nprocedure testFor;\n\tvar i;\n\tbegin\n\t\ti := 0;\n\t\tfor 3 to upper do\n\t\t\ti := i + 1;\n\t\tres2 := i;\n\tend;\n\nbegin\n\t(* call testWhile; *)\n\tcall testFor;\n\n\t(* Expects 8 in res1 and 5 in res2 *)\nend.\n";
 
-
+    /**
+     * Main test method. Throws exception with information if the test fails.
+     */
     window.runTestCase = function() {
         Parser.parse(true, inputCode);
 

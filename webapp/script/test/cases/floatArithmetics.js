@@ -73,7 +73,9 @@
 
     let inputCode = "(* last case in div fails. Note: all variables must have type 'float' specified, \n   because by default variables are integer. All values must have decimal point specified, \n   otherwise they are considered as integers. \n*)\nconst t: float = 1.000, f: float = 0.0001;\nvar a: float, b: float;\n\nprocedure plus;\n\tvar x: float;\n\tbegin\n\t\tx := 0.01;\n\t\ta := x + t; (* 1.01 in a *)\n\t\ta := x + t + f; (* 1.0101 in a *)\n\t\tb := x + 3.0; (* 3.01 in b*)\n\tend;\n\nprocedure minus;\n\tvar x: float;\n\tbegin\n\t\tx := 0.01;\n\t\ta := t - x; (* 0.99 in a *)\n\t\tb := x - 3.0; (* -2.99 in b *)\n\tend;\n\nprocedure mult;\n\tvar x: float;\n\tbegin\n\t\tx := 0.5;\n\t\ta := x * t; (* 0.5 in a *)\n\t\tb := x * 3.0; (* 1.5 in b *)\n\tend;\n\nprocedure div;\n\tvar x: float;\n\tbegin\n\t\tx := 1.0;\n\t\ta := x / f; (* 10000 in a *)\n\t\tb := x / 3.0; (* 0.333 in b TODO: this results in 0 *)\n\tend;\n\nbegin\n\tcall plus;\n\tcall minus;\n\tcall mult;\n\tcall div;\nend.";
 
-
+    /**
+     * Main test method. Throws exception with information if the test fails.
+     */
     window.runTestCase = function() {
         Parser.parse(true, inputCode);
 

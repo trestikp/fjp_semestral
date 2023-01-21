@@ -119,7 +119,9 @@
 
     let inputCode = "const a = 5, b = 2;\nvar res, res2;\n\nbegin\n\tres  := 0;\n\tres2 := 0;\n\n\tif a =  5  then res := res + 1;  (* true\t *)\n\tif a <  5  then res := res + 1;  (* false\t*)\n\tif a >  5  then res := res + 1;  (* false\t*)\n\tif a <= 5  then res := res + 1;  (* true\t *)\n\tif a >= 5  then res := res + 1;  (* true\t *)\n\tif a #  5  then res := res + 1;  (* false\t*)\n\tif a # -1  then res := res + 1;  (* true\t *)\n\n\tif a =  b then res2 := res2 + 1; (* false\t*)\n\tif a <  b then res2 := res2 + 1; (* false\t*)\n\tif a >  b then res2 := res2 + 1; (* true\t *)\n\tif a <= b then res2 := res2 + 1; (* false\t*)\n\tif a >= b then res2 := res2 + 1; (* true\t *)\n\tif a #  b then res2 := res2 + 1; (* true\t *)\n\n\t(* at the end res = 4, res2 = 3 *)\nend.";
 
-
+    /**
+     * Main test method. Throws exception with information if the test fails.
+     */
     window.runTestCase = function() {
         Parser.parse(true, inputCode);
 

@@ -271,7 +271,9 @@
 
     let inputCode = "const a = 5, b = 5, c = 8, d = 5;\nvar res1, res2, res3, res4;\n\nprocedure negation;\n\tbegin\n\t\tres1 := 0;\n\t\t(* false *)\n\t\tif ~ a = b \n\t\t\tthen res1 := res1 + 1;\n\t\t(* false *)\n\t\tif ~a = b \n\t\t\tthen res1 := res1 + 1;\n\t\t(* true *)\n\t\tif ~a = c\n\t\t\tthen res1 := res1 + 1;\n\n\t\t(* expects res = 1 *)\n\tend;\n\nprocedure and;\n\tbegin\n\t\tres2 := 0;\n\t\t(* true *)\n\t\tif a = b & b = d \n\t\t\tthen res2 := res2 + 1;\n\t\t(* false *)\n\t\tif a = b & ~b = d \n\t\t\tthen res2 := res2 + 1;\n\t\t(* false *)\n\t\tif ~a = b & b = d \n\t\t\tthen res2 := res2 + 1;\n\t\t(* true *)\n\t\tif a = b & ~b = c\n\t\t\tthen res2 := res2 + 1;\n\n\t\t(* expects res = 2 *)\n\tend;\n\nprocedure or;\n\tbegin\n\t\tres3 := 0;\n\t\t(* true *)\n\t\tif a = b | b = d \n\t\t\tthen res3 := res3 + 1;\n\t\t(* true *)\n\t\tif a = b | ~b = d \n\t\t\tthen res3 := res3 + 1;\n\t\t(* true *)\n\t\tif ~a = b | b = d \n\t\t\tthen res3 := res3 + 1;\n\t\t(* false *)\n\t\tif a = c | b = c\n\t\t\tthen res3 := res3 + 1;\n\n\t\t(* expects res = 3 *)\n\tend;\n\nprocedure complex;\n\tbegin\n\t\tres4 := 0;\n\t\t(* true *)\n\t\tif a = b & b = d & ~b = c | c = d\n\t\t\tthen res4 := res4 + 1;\n\t\t(* true *)\n\t\tif a = c & b = c | ~c = d\n\t\t\tthen res4 := res4 + 1;\n\t\t(* false *)\n\t\tif a = c & b = c | c = d\n\t\t\tthen res4 := res4 + 1;\n\n\t\t(* expects res = 2 *)\n\tend;\n\nbegin\n\tcall negation;\n\tcall and;\n\tcall or;\n\tcall complex;\nend.";
 
-
+    /**
+     * Main test method. Throws exception with information if the test fails.
+     */
     window.runTestCase = function() {
         Parser.parse(true, inputCode);
 

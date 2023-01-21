@@ -23,7 +23,7 @@
 \vspace{30px}
 {\huge
 \textbf{Formální jazyky a překladače}\\
-\textbf{PL0 překladač pro online interpret}\\
+\textbf{PL/0 překladač pro online interpret}\\
 \vspace{1cm}
 }
 {\large
@@ -61,7 +61,7 @@ zásobníku a zpět vloží jejich sumu. Instrukce mají vždy 2 parametry, kter
 V předchozích letech tohoto předmětu byl vytvořen online interpret takovýchto instrukcí. V rámci předmětu byly také 
 vytvořeny překladače pro tento jazyk, avšak tyto překladače jsou buď zastaralé a nebo nejdou spustit online. Cílem 
 této práce je vytvořit překladač, který bude provozován online a nevyžaduje běžící backendovou aplikaci. Ze zadání
-jsou na překladač kladeny požadavky na vlastnoti, které musí překládaný jazyk (a tedy i překladač) podporovat. Tyto 
+jsou na překladač kladeny požadavky na vlastnosti, které musí překládaný jazyk (a tedy i překladač) podporovat. Tyto 
 požadavky nejsou částí původní gramatiky jazyka PL/0 a proto je třeba ho rozšířit. Zároveň je ale chtěné zachovat
 zpětnou kompatibilitu s jazykem PL/0, což může omezovat náš nový jazyk, který PL/0 rozšiřuje.
 %
@@ -85,7 +85,7 @@ a je možné v něm naprogramovat plně \uv{client-side} překladač.
 \noindent Funkce jazyka, které nejsou požadovaným minimem, ale byly zvoleny pro dosažení bodů nutných ke splnění práce:
 %
 \begin{itemize}
-    \item každý další typ cyklu (for, do .. while, while .. do, repeat .. unitl, foreach pro pole)
+    \item každý další typ cyklu (for, do .. while, while .. do, repeat .. until, foreach pro pole)
     \item else větev
     \item datový typ boolean a logické operace s ním
     \item datový typ real (s celočíselnými instrukcemi)
@@ -95,18 +95,18 @@ a je možné v něm naprogramovat plně \uv{client-side} překladač.
     \item návratová hodnota podprogramu
 \end{itemize}
 
-Překlače je možno implementovat různými způsoby. Mezi hlavní 2, které se učí v tomto předmětu, patří implementace pomocí
+Překladače je možno implementovat různými způsoby. Mezi hlavní 2, které se učí v tomto předmětu, patří implementace pomocí
 zásobníkového automatu a nebo pomocí takzvaného rekurzivního sestupu. Implementace pomocí zásobníkového automatu může
 být jednodušší, protože existují nástroje, pro které stačí definovat tokeny jazyka a jeho gramatiku a tyto nástroje
-následně vygenerují automat, který jazyk překladá. Do automatu se akorát doplní logika generující instrukce. Na druhou
+následně vygenerují automat, který jazyk překládá. Do automatu se akorát doplní logika generující instrukce. Na druhou
 stranu rekurzivní sestup je více v rukou programátora. Výhodou rekurzivního sestupu tedy je, že programátor si může
-překladač více řídit sám. Nevýhodou je, že implementace je časově dělší, náročnější na práci a také může být složitější
+překladač více řídit sám. Nevýhodou je, že implementace je časově delší, náročnější na práci a také může být složitější
 optimalizovat výsledné instrukce, než to je u zásobníkového automatu.
 %
 \subsection{Gramatika jazyka}
 % why did \url{} refused to work in \footnote{}??? it used to work just fine, but this is workaround
 \urldef{\urlA}\url{https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form}
-Jak již bylo zmíněno, gramatika jazyka této práce výchází z PL/0 a musí na PL/0 zachovat zpětnou kompatibilitu.
+Jak již bylo zmíněno, gramatika jazyka této práce vychází z PL/0 a musí na PL/0 zachovat zpětnou kompatibilitu.
 PL/0 má následující gramatiku (v EBNF
 \footnote{Extended Backus-Naur form - \urlA}):
 %
@@ -137,7 +137,7 @@ factor = ident | number | "(" expression ")";
 \end{lstlisting}
 %
 Tato gramatika téměř splňuje minimální zadání práce. Chybí v ní akorát logické operátory. Gramatiku tedy stačí rozšířit
-vybrané funkce. Tyto funkce byly záměrně vybrány tak, aby byly do gramatiky snadno dodělatelné. Návrh výsledné gramatiky
+vybrané funkce. Tyto funkce byly záměrně vybrány tak, aby byly do gramatiky snadno dodělané. Návrh výsledné gramatiky
 vypadá následovně:
 \begin{lstlisting}[caption=Navržená gramatika rozšiřující PL/0, captionpos=b]
 program = block "." ;
@@ -181,8 +181,8 @@ Jak bylo navrženo v analýze, tak překladač byl implementován v jazyce JavaS
 zvolen rekurzivní sestup. Pro parsování kódu jazyka na tokeny byl použit nástroj \textbf{jison-lex}
 \footnote{jison-lex - \urlB}, což je JavaScript alternativa nástroje \textbf{lex}, který je učen v tomto předmětu.
 
-Při realizaci bylo zjištěno několik chyb v gramatice, a navrženou gramatiku bylo třeba ještě doupravit, aby bylo
-možné implementovat vybrané vlastnoti jazyka. Finální verze gramatiky vypadá následovně:
+Při realizaci bylo zjištěno několik chyb v gramatice, a navrženou gramatiku bylo třeba ještě do upravit, aby bylo
+možné implementovat vybrané vlastnosti jazyka. Finální verze gramatiky vypadá následovně:
 %
 \begin{lstlisting}[caption=Finální gramatika, captionpos=b]
 program = block "." ;
@@ -198,7 +198,8 @@ block = [ "const" ident [":" data_type] "="
 statement = [ ident ":=" expression 
                 | "{" ident {, ident} "} := 
                   {" value{, value} "}" 
-                | "call" ident
+                | "call" ident 
+                  ["(" expression {"," expression } ")"]
                 | "?" ident
                 | "!" expression 
                 | "begin" statement {";" statement } "end" 
@@ -302,12 +303,12 @@ Po rozšíření o logiku pro generování instrukcí, které plní funkci \text
 %
 \urldef{\urlC}\url{https://en.wikipedia.org/wiki/Symbol_table}
 Samozřejmě překladač drží více logiky, než pouze jednoduché generování instrukcí jako v příkladu \texttt{while}. Některé
-funkce reprezentující gramatiku souvisí s jinými a je třeba něják tyto souvislosti udržovat, aby se daly využívat všude,
+funkce reprezentující gramatiku souvisí s jinými a je třeba nějak tyto souvislosti udržovat, aby se daly využívat všude,
 kde jsou potřeba. Příkladem tohoto je tabulka symbolů\footnote{Tabulka symbolů - \urlC}. Ta udržuje informace o všech identifikátorech v
 programu - tedy názvech proměnných, konstant či funkcí. V této práci jsou tyto informace také udržovány, ale nejsou v
 jednotné tabulce. Práce rozděluje tabulka hlavně na 2 části. První je list identifikátorů procedur a informací o 
-proceduře (jako například návratový typ, pokud nějáký má). Druhou je \uv{matice} idetifikátorů proměnných, do které jsou
-vkládany řádky, každého kontextu, který je zrovna překládán a tedy které proměnné jsou zrovna dostupné. Sestup také 
+proceduře (jako například návratový typ, pokud nějaký má). Druhou je \uv{matice} identifikátorů proměnných, do které jsou
+vkládaný řádky, každého kontextu, který je zrovna překládán a tedy které proměnné jsou zrovna dostupné. Sestup také 
 udržuje několik \uv{flag} proměnných, které slouží ke správné funkci překladače.
 %
 \subsection{Grafické rozhraní}
@@ -335,13 +336,13 @@ Veškeré ovládací prvky jsou zobrazeny na horní ovládací liště, která j
 Toto tlačítko slouží pro načtení vstupního souboru z počítače uživatele. Povoleny jsou pouze soubory ve formátu \textit{.txt}. Před tím než uživatel vybere soubor je upozorněn, že tato akce smaže jeho aktuální kód. Po potvrzení vybere  soubor a ten je načten do vstupního okna.
 
 \myparagraph{Spuštění překladu - ikona přehrání}
-Stisktnuím tohoto tlačítka uživatel spustí překlad kódu z vstupního editoru. V případě, že je kód validní jsou do výstupního okna vloženy přeložené instrukce. Pokud ovšem kód obsahuje nějakou chybu, je tato chyba vypsána do konzole ve spodní části obrazovky a zároveň je kód způsobující chybu podtržen. Obsah ve výstupním okně zůstává nezměň, může obsahovat instrukce z předchozích korektních běhů.
+Stisknutím tohoto tlačítka uživatel spustí překlad kódu z vstupního editoru. V případě, že je kód validní jsou do výstupního okna vloženy přeložené instrukce. Pokud ovšem kód obsahuje nějakou chybu, je tato chyba vypsána do konzole ve spodní části obrazovky a zároveň je kód způsobující chybu podtržen. Obsah ve výstupním okně zůstává nezměň, může obsahovat instrukce z předchozích korektních běhů.
 
 \myparagraph{Načtení příkladů - selectbox a tlačítko Load example}
 Pro uživatele bylo připraveno několik příkladů, které demonstrují funkčnosti vytvořeného programovacího jazyka. Ty lze načíst do vstupního okna kliknutím na selectbox a vybráním příslušného příkladu. Po stisknutí tlačítka Load example je bez zobrazení varování kód ve vstupním editoru nahrazený daným příkladem. Všechny příklady jsou funkční a obsahují například ukázku aritmetiky, podmínek a procedur.
 
 \myparagraph{Spuštění testů - tlačítko Run tests}\label{sec:testovaniTlacitko}
-Po stisknutí tlačítka je spuštěno automatické testování. Testovací případy jsou pomocí asynchronního volání načteny ze serveru a následě spuštěny. Uživateli je pak zobrazeno okno s výsledky testování, viz \chapterRef{sec:testovani}.
+Po stisknutí tlačítka je spuštěno automatické testování. Testovací případy jsou pomocí asynchronního volání načteny ze serveru a následně spuštěny. Uživateli je pak zobrazeno okno s výsledky testování, viz \chapterRef{sec:testovani}.
 
 \myparagraph{Přepnutí režimu - tlačítko sluníčko nebo měsíček}
 Tímto tlačítkem se přepíná mezi světlým a tmavým režimem editoru. Editor je ve výchozím stavu spuštěn v tmavém režimu, po stisknutí na tlačítko sluníčka je ikona a barva tohoto tlačítka změněna a je nahrazeno tmavé schéma editoru schématem světlým. Opětovným stisknutím stejného tlačítka se editor přepne opět na tmavé schéma.
@@ -356,7 +357,7 @@ Tímto tlačítkem se přepíná mezi světlým a tmavým režimem editoru. Edit
 Tlačítko slouží pro skrytí okna konzole. Po jejím skrytí je editor roztažen na celou výšku okna (kromě horní lišty). Výstupy z aplikace jsou do konzole stále vypisovány, po jejím zobrazení stisknutím stejného tlačítka uživatel vidí veškeré aktuální výpisy.
 
 \myparagraph{Zobrazení debuggeru - ikona brouka}
-Napojení na debugger lze spustit stisknutím tlačítka pro debug. Po stisknutí je výstupní kód automaticky odeslán do napojeného debuggeru a debugování je spuštěno. Okna editorů jsou nahrazeny připraveným debuggerem, pro opětovné otevření editorů je nutné stisknout stejné tlačítko. Okno spuštěného debuggeru nelze poté vyvolat zpět, lze ho pouze načíst od začátku stejným tlačítekm. Pokud je napojení na debugger nefunkční, je zobrazena chybová zpráva do konzole a uživateli zůstávají k dispozici okna editoru. Dále viz \chapterRef{sec:debugger}
+Napojení na debugger lze spustit stisknutím tlačítka pro debug. Po stisknutí je výstupní kód automaticky odeslán do napojeného debuggeru a debugování je spuštěno. Okna editorů jsou nahrazeny připraveným debuggerem, pro opětovné otevření editorů je nutné stisknout stejné tlačítko. Okno spuštěného debuggeru nelze poté vyvolat zpět, lze ho pouze načíst od začátku stejným tlačítkem. Pokud je napojení na debugger nefunkční, je zobrazena chybová zpráva do konzole a uživateli zůstávají k dispozici okna editoru. Dále viz \chapterRef{sec:debugger}
 
 \myparagraph{Stažení kódu - ikona mráčku s šipkou dolů}
 Soubor obsahující výsledné instrukce lze stáhnout pomocí předposledního tlačítka na ovládací liště. Soubor s názvem \textit{outputCode.txt} obsahuje jednoduchý seznam výsledných instrukcí podobně jako ve výstupním okně editoru.
@@ -379,7 +380,7 @@ Při inicializaci očekává překladač zprávu \textit{READY}, která indikuje
 \section{Řešené problémy}
 Řešeno byla dlouhá řada problémů, různých složitostí. Například volání procedur je realizováno tak, že je vložena
 instrukce \textbf{CAL 0 par}, kde \textbf{par} je index v listu kontextů. Index odpovídá instrukci, na který je nalezena
-instrukce \textbf{JMP 0 x}, která skočá na tělo procedury. Toho je docíleno tak, že po vygenerování všech instrukcí jsou
+instrukce \textbf{JMP 0 x}, která skočí na tělo procedury. Toho je docíleno tak, že po vygenerování všech instrukcí jsou
 na začátek seznamu instrukcí vloženy instrukce \textbf{JMP} tak, aby odpovídaly indexům listu kontextů. Následkem tohoto
 vložení je potom nutné všechny skokové instrukce posunout o počet vložených instrukcí. Problém byl takto řešen, protože
 takto byly realizovány volání v příkladech na cvičení předmětu. Možná lepším řešením by ale mohlo být do instrukcí 
@@ -393,9 +394,9 @@ ovšem během testování bylo zjištěno, že několik operací neodpovídá ma
 některé operace používá jiné čísla. Tento problém není problém implementační, ale stále způsobil značnou ztrátu času.
 
 Mezi opravdu těžké problémy by pak patřila například implementace \texttt{for} cyklu. \texttt{for} cyklus vezme 
-výsledky dvou výrazů a z nich vypočte počet itercí, a poté iteruje do 0. Alespoň takto je navržen \texttt{for} cyklus
+výsledky dvou výrazů a z nich vypočte počet iterací, a poté iteruje do 0. Alespoň takto je navržen \texttt{for} cyklus
 této práce. Implementovat ho ale bylo těžké, protože PL/0 instrukce nemají žádný způsob pro kopírování hodnot na 
-vrcholu zásobníku či zjištění ukazatele na vrcho zásobníku. Kvůli tomuto nešlo cyklus implementovat bez pomocné 
+vrcholu zásobníku či zjištění ukazatele na vrchol zásobníku. Kvůli tomuto nešlo cyklus implementovat bez pomocné 
 proměnné. Řešením tedy je, že pro kontext se vytváří navíc proměnné, pokud obsahuje \texttt{for} cyklus. Navíc bylo
 třeba ošetřit možnost noření cyklů a je tedy třeba počítat kolik pomocných proměnných pro \texttt{for} je 
 vlastně potřeba.
@@ -413,7 +414,7 @@ Testování je spouštěno přímo z uživatelského rozhraní pomocí tlačítk
 Pro práci bylo připraveno více jak 15 testovacích případů, které testují správnost lexeru a správnost vygenerovaných instrukcí, nebo správnost zobrazených chybových zpráv (negativní testy).
 %
 \section{Závěr}
-Výsledkem práce je funkční webový překladač námi definovaného jazyka, který překládá vstupní kód na výstupní instrukce jazyka PL0. Překladač splňuje všechny základní body zadání, zároveň ale umožňuje zpracování pokročilých, bonusových, instrukcí. Pro používání veškerých funkcí překladače je připraveno webové rozhraní s využitím primárně jazyka HTML a JavaScript. Správná funkčnost překladače je ověřena pomocí několika testů. Překladač je napojený na mírně upravený debugger vytvořený studenty z předchozích let a umožňuje výstupní instrukce automaticky spouštět a ladit ve stejném okně. 
+Výsledkem práce je funkční webový překladač námi definovaného jazyka, který překládá vstupní kód na výstupní instrukce jazyka PL/0. Překladač splňuje všechny základní body zadání, zároveň ale umožňuje zpracování pokročilých, bonusových instrukcí. Pro používání veškerých funkcí překladače je připraveno webové rozhraní s využitím primárně jazyka HTML a JavaScript. Správná funkčnost překladače je ověřena pomocí několika testů. Překladač je napojený na mírně upravený debugger vytvořený studenty z předchozích let a umožňuje výstupní instrukce automaticky spouštět a ladit ve stejném okně. 
 %%%
 %%%
 \end{document}

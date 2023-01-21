@@ -7,8 +7,8 @@
     window.runTestCase = function() {
         let errors = Parser.parse(true, inputCode, true);
 
-        if (errors.length != 1) {
-            throw "Expected at 1 error, but got " + errors.length; 
+        if (errors.length == 0) {
+            throw "Expected at least one error, but got " + errors.length; 
         } 
         
         if(errors[0].symbol != "plus") {

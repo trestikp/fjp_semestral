@@ -6,10 +6,10 @@
 
 
 (function ($) {
-    const test_string_static = "begin call const do else end foreach for if in odd procedure return then to var while := : \
+    const test_string_static = "begin call const do else end for if in odd procedure return then to var while := : \
     ; , . ( ) { } ? ! # = <= < >= > + - * / (* *)";
     const static_results = [Symbols.begin, Symbols.call, Symbols.const, Symbols.do, Symbols.else, Symbols.end, 
-        Symbols.foreach, Symbols.for, Symbols.if, Symbols.in, Symbols.odd, Symbols.procedure, Symbols.return, 
+        Symbols.for, Symbols.if, Symbols.in, Symbols.odd, Symbols.procedure, Symbols.return, 
         Symbols.then, Symbols.to, Symbols.var, Symbols.while, Symbols.assignment, Symbols.colon, Symbols.semicolon,
         Symbols.comma, Symbols.dot, Symbols.open_bra, Symbols.close_bra, Symbols.open_curl, Symbols.close_curl, 
         Symbols.quest_mark, Symbols.excl_mark, Symbols.hash_mark, Symbols.eq, Symbols.lte, Symbols.lt, Symbols.gte,

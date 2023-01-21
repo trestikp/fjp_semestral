@@ -871,7 +871,7 @@ let recursive_descent = (function() {
             // procedures
             while (this.accept(Symbols.procedure)) {
                 if (!this.block_procedure()) {
-                    thier.error("Failed to compile procedure body.");
+                    this.error("Failed to compile procedure body.");
                     return false;
                 }
             }

@@ -220,6 +220,7 @@ let recursive_descent = (function() {
         for_nest_counter: 0, // holds total number of nested if
         for_var_count: 0, // increses/ decreses when entering/ leaving for loop
         ternary_return_flag: false,
+        processing_condition: false, // flag that is true, when processing condition - to determin whether &,| are logic operators or condition concat operators
     
         /**
          * Loads next symbol from lexer (tokenizer) into symbol variable. 
@@ -275,6 +276,8 @@ let recursive_descent = (function() {
         },
 
         condition_expression: function() {
+            this.processing_condition = true;
+
             this.condition_expression_inner();
 
             let is_true_on_and;
@@ -289,6 +292,8 @@ let recursive_descent = (function() {
                     this.logical_or_inst();
                 }
             }
+
+            this.processing_condition = false;
 
             return true;
         },
@@ -529,6 +534,12 @@ let recursive_descent = (function() {
             let loop_inner_type;
             let operation;
 
+            // processing condition => &,| are condition concat operators and not expression operators!
+            if (this.processing_condition && inner_type != Symbols_Input_Type.boolean) {
+                if (this.symbol == Symbols.ampersand || this.symbol == Symbols.pipe)
+                    return inner_type;
+            }
+
             while (this.accept(Symbols.star) || this.accept(Symbols.slash) || 
                    this.accept(Symbols.ampersand) || this.accept(Symbols.pipe)) 
             {
@@ -552,8 +563,10 @@ let recursive_descent = (function() {
 
                 switch (operation) {
                     case Symbols.star:
+                        push_instruction(Instructions.OPR, 0, OPR.multiplication);
+                        break;
                     case Symbols.slash:
-                        push_instruction(Instructions.OPR, 0, operation);
+                        push_instruction(Instructions.OPR, 0, OPR.division);
                         break;
                     case Symbols.ampersand:
                         // these instructions are used to take 2 boolean values on stack and combine it to AND result

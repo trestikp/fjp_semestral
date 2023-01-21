@@ -747,10 +747,17 @@ let recursive_descent = (function() {
             return true;
         },
     
-        block: function() {
+        block: function(params) {
             // let consts = [], vars = [];
             let vars = []; // constants and variables of current scope
             let var_obj;
+
+            // if block has params, then push them at the start of all variables
+            if (params != undefined && params != null && params.length > 0) {
+                for (let i = 0; i < params.length; i++) {
+                    vars.push(params[i]);
+                }
+            }
 
             // const
             if (this.accept(Symbols.const)) {
@@ -801,8 +808,26 @@ let recursive_descent = (function() {
                     return false; // failed to compile procedure
             }
 
-            // push parameters to variables and set var length
-            vars.push(parameters);
+            // if (parameters != null) {
+            //     if (!Array.isArray(parameters)) {
+            //         this.error("parameters are not an array???");
+            //         console.log("parameters are not an array???");
+            //         return false;
+            //     }
+
+            //     if (parameters == 0) {
+            //         this.error("parameters is 0???");
+            //         console.log("parameters is 0???");
+            //         return false;
+            //     }
+            // }
+
+            // // put parameters before other variables (vars + consts)
+            // vars.unshift(parameters);
+            // // offset constants + variables by number of parameters (so parameters are before actual variables)
+            // for (let i = parameters.length; i < vars.length; i++) {
+            //     vars[i].position += parameters.length;
+            // }
             this.context_list[this.context_list.length - 1].c_var_count = vars.length;
 
             // this value is returned - this is an address where this block instructions start
@@ -810,6 +835,17 @@ let recursive_descent = (function() {
 
             // alloc space for variables in current stack frame
             let stac_alloc_inst = push_instruction_and_return(Instructions.INT, 0, 0);
+
+            // if block has params, then push them at the start of all variables
+            if (params != undefined && params != null && params.length > 0) {
+
+                // load params from previous context
+                for (let i = 1; i <= params.length; i++) {
+                    // LIT -i loads values from the top of the stack in previous context
+                    push_instruction(Instructions.LOD, 0, -i);
+                    push_instruction(Instructions.STO, 0, this.SB_DB_PC_RV + params.length - i); // top of the previous stack is last param
+                }
+            }
 
             // initialize constant values
             for (let i = 0; i < vars.length; i++) {
@@ -1095,7 +1131,7 @@ let recursive_descent = (function() {
                 return null;
             }
 
-            let vars = [];
+            let params = [];
             let var_obj;
             // optionally parameters
             // [ "(" ident [ : data_type ] {"," ident [ : data_type ]} ")" ]
@@ -1105,10 +1141,10 @@ let recursive_descent = (function() {
                     if ((var_obj = this.load_ident_and_type()) === false) 
                         return false; // failed parsing 
     
-                    var_obj.position = this.SB_DB_PC_RV + vars.length;
+                    var_obj.position = this.SB_DB_PC_RV + params.length;
                     var_obj.level = this.level_counter;
                     var_obj.is_param = true;
-                    vars.push(var_obj);
+                    params.push(var_obj);
                     param_count++;
                 } while (this.accept(Symbols.comma));
                 
@@ -1128,7 +1164,7 @@ let recursive_descent = (function() {
             // block
             let current_context = this.push_context(ident_name, -1, return_type, param_count);
             let block_start = 0;
-            if ((block_start = this.block()) === false) {
+            if ((block_start = this.block(params)) === false) {
                 this.error("Failed to compile procedure (" + ident_name + ") body.");
                 return null;
             }
@@ -1137,7 +1173,7 @@ let recursive_descent = (function() {
             // decrease level counter because we are returning
             this.level_counter--;
 
-            return vars;
+            return params;
         },
 
 
@@ -1283,13 +1319,14 @@ let recursive_descent = (function() {
                 return false;
             }
 
-            // except for main - main is always index 0 and is first instruction of the program
-            push_instruction(Instructions.CAL, 0, context_index);
-
-            // TODO: jak udelat parametery:
             /*
-                call je na index -> na indexu je vzdycky jump s adresou -> vlozit instrukce pro inicializaci promenych
-                na adresu skoku a pak vsechny skoky od tutoho posunout o pocet instrukci.. neni to idealni, ale je to jediny zpusob
+                resolve parameters before call - should result in
+                stack: 
+                    procedure stuff
+                    p1
+                    p2
+                    ...
+                    new stack frame (call)
             */
 
             let context = this.context_list[context_index];
@@ -1302,7 +1339,7 @@ let recursive_descent = (function() {
                         return false;
                     }
 
-                    push_instruction(Instructions.STO, 0, context.c_var_count - context.c_par_count + i);
+                    // push_instruction(Instructions.STO, 0, context.c_var_count - context.c_par_count + i);
 
                     i++;
                     if (i > context.c_par_count) {
@@ -1316,6 +1353,12 @@ let recursive_descent = (function() {
                     return false;
                 }
             }
+
+            // except for main - main is always index 0 and is first instruction of the program
+            push_instruction(Instructions.CAL, 0, context_index);
+            if (context.c_par_count > 0)
+                push_instruction(Instructions.INT, 0, -context.c_par_count); // clear param values from stack after call finished45
+
             
             return context.c_return_type;
         },

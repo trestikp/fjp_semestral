@@ -802,13 +802,8 @@ let recursive_descent = (function() {
                     if (!this.statement_end()) {
                         return false;
                     }
-                    return 10; // special case - returns on true - doesn't return boolean
+                    return 10; // special case - returns 10 on true - doesn't return boolean
                 default:
-                    // exceptions - these Symbols aren't statements, but can be mistaken for it
-                    // {
-                    //     if (this.symbol == Symbols.else)
-                    //         return true;
-                    // }
                     this.error("Unrecognized statement: " + this.symbol_value);
                     return false;
             }
@@ -818,8 +813,12 @@ let recursive_descent = (function() {
             return true;
         },
     
+        /**
+         * Grammar rule: block = ...
+         * @param {*} params array of variables, that the block takes as parameters
+         * @returns position where this block instruction start (int) on success, false otherwise
+         */
         block: function(params) {
-            // let consts = [], vars = [];
             let vars = []; // constants and variables of current scope
             let var_obj;
 
@@ -836,7 +835,6 @@ let recursive_descent = (function() {
                     if ((var_obj = this.block_const()) === false) 
                         return false; // failed parsing
                         
-                    // consts.push(var_obj);
                     var_obj.position = this.SB_DB_PC_RV + vars.length;
                     var_obj.level = this.level_counter;
                     vars.push(var_obj);
@@ -870,44 +868,22 @@ let recursive_descent = (function() {
             // must push vars before procedures, so we can use them in procs
             this.variables.push(vars);
 
-            let parameters = []; // procedure parameters
             // procedures
             while (this.accept(Symbols.procedure)) {
-                parameters = this.block_procedure();
-                
-                if (parameters == null)
-                    return false; // failed to compile procedure
+                if (!this.block_procedure()) {
+                    thier.error("Failed to compile procedure body.");
+                    return false;
+                }
             }
-
-            // if (parameters != null) {
-            //     if (!Array.isArray(parameters)) {
-            //         this.error("parameters are not an array???");
-            //         console.log("parameters are not an array???");
-            //         return false;
-            //     }
-
-            //     if (parameters == 0) {
-            //         this.error("parameters is 0???");
-            //         console.log("parameters is 0???");
-            //         return false;
-            //     }
-            // }
-
-            // // put parameters before other variables (vars + consts)
-            // vars.unshift(parameters);
-            // // offset constants + variables by number of parameters (so parameters are before actual variables)
-            // for (let i = parameters.length; i < vars.length; i++) {
-            //     vars[i].position += parameters.length;
-            // }
-            this.context_list[this.context_list.length - 1].c_var_count = vars.length;
 
             // this value is returned - this is an address where this block instructions start
             let block_start = instruction_list.length;
 
-            // alloc space for variables in current stack frame
+            // alloc space for variables in current stack frame - number changes after analyzing for loops
             let stac_alloc_inst = push_instruction_and_return(Instructions.INT, 0, 0);
 
             // if block has params, then push them at the start of all variables
+            // param values are resolved before call
             if (params != undefined && params != null && params.length > 0) {
 
                 // load params from previous context
@@ -937,25 +913,22 @@ let recursive_descent = (function() {
                             push_instruction(Instructions.LIT, 0, val.value);
                     }
                     
-                    // push_instruction(Instructions.STO, val.level, val.position);
                     // level is always 0, because we are initing constants for current scope (each scope inits its own constants)
                     push_instruction(Instructions.STO, 0, val.position);
                 }
             }
 
             if (!this.statement()) {
-                // print some error? - statement compiling will print errors on where it failed
                 return false;
             }
 
-            // pop variables of this context, only if there are any
+            // pop variables of this context (so they are not available for other contexts)
             this.variables.pop();
 
             // setting stack frame allocation AFTER statements, because statements can require "dynamic" number of variables
-            // pp_count is no longer used, because parameters are added to the "vars" array
             stac_alloc_inst.par2 = this.SB_DB_PC_RV + vars.length + this.for_var_count;
 
-            this.for_var_count = 0;
+            this.for_var_count = 0; // counter reset
 
             // TODO: this is doubled, when return is last statement (= unreachable - small optimalization = low prio)
             push_instruction(Instructions.RET, 0, 0);
@@ -963,6 +936,11 @@ let recursive_descent = (function() {
             return block_start;
         },
     
+        /**
+         * Grammar rule: program = block "." ;
+         * Entry point to the compiler. Resets flags, counters etc. on call.
+         * @returns compilationErrors list if there are any
+         */
         program: function() {
             // reset recursive descent flags
             this.compilationErrors = []; //Empty the errors ftom previous iterations
@@ -1001,17 +979,17 @@ let recursive_descent = (function() {
             return this.compilationErrors;
         },
     
-        /**************************************************************************************************************
+        /**************************************************************************************************************\
          * private functions - used in non-terminal function calls                                                    *
-         **************************************************************************************************************/
+        \**************************************************************************************************************/
 
         /**
          * Pushes new context object to "context_list". Context must contain name and adress. Optionally context return
          * type if present.
          */
-        push_context: function(c_name, c_address, c_return_type = null, c_level = 0, c_par_count = 0, c_var_count = 0) {
+        push_context: function(c_name, c_address, c_return_type = null, c_level = 0, c_par_count = 0) {
             console.log("adding context: " + c_name);
-            this.context_list.push({c_name, c_address, c_return_type, c_level, c_par_count, c_var_count});
+            this.context_list.push({c_name, c_address, c_return_type, c_level, c_par_count});
             return this.context_list[this.context_list.length - 1];
         },
 
@@ -1028,6 +1006,11 @@ let recursive_descent = (function() {
             return null;
         },
 
+        /**
+         * Searches the context_list. If the list contains object with @c_name returns its index. Returns -1 otherwise.
+         * 
+         * NOTE: could be replaced with just: get_context_by_name
+         */
         get_context_index_by_name: function (c_name) {
             for (let i in this.context_list) {
                 if (this.context_list[i].c_name == c_name) {
@@ -1057,24 +1040,29 @@ let recursive_descent = (function() {
             return null;
         },
 
+        /**
+         * Resolves "true" into 1, 0 otherwise
+         */
         get_boolean_as_int: function(bool_string) {
             return bool_string == "true" ? 1 : 0;
         },
 
+        /**
+         * Checks if @input exists in data types
+         */
         validate_data_type: function(input) {
             let types = Object.keys(Symbols_Input_Type);
             for (let i = 0; i < types.length; i++) {
                 if (types[i] == input)
                     return true;
             }
-            // Object.keys(Symbols_Input_Type).forEach(key => {
-            //     if (key == input)
-            //         return true;
-            // });
 
             return false;
         },
 
+        /**
+         * Returns true if @type can perform @action operation. False otherwise
+         */
         has_type_action: function(type, action) {
             if (dtype_operations.has(type)) {
                 if (dtype_operations.get(type).indexOf(action) >= 0)
@@ -1115,10 +1103,18 @@ let recursive_descent = (function() {
             return [ident_name, data_type];
         },
 
+        /**
+         * Validates wether expected data type was read. Validation is done compared to data type set by lexer. 
+         * Lexer can resolve what data type was loaded => improved efficiency.
+         */
         validate_last_type_to_expected: function(expected_dtype) {
             return symbol_input_type == expected_dtype;
         },
 
+        /**
+         * Accepts identifier and its type (if supplied).
+         * @returns object representing variable or false
+         */
         load_ident_and_type: function() {
             // this will be array of [name, data_type], where data_type can be null
             let name_and_type = this.block_ident_declaration();
@@ -1140,6 +1136,10 @@ let recursive_descent = (function() {
             return make_var(name_and_type[0], name_and_type[1]);
         },
     
+        /**
+         * Accepts variables, that represent constants. These variables must be initialized with values.
+         * @returns "variable object" on success, false otherwise
+         */
         block_const: function() {
             // this will be array of [name, data_type], where data_type can be null
             let var_obj = this.load_ident_and_type();
@@ -1171,6 +1171,11 @@ let recursive_descent = (function() {
             return var_obj;
         },
 
+        /**
+         * Part of grammar rule block: { "procedure" [data_type] ident [ "(" ident [ : data_type ] {"," ident [ : data_type ]} ")" ] ";" block ";" } statement ;
+         * Parses procedures defined in block.
+         * @returns true on success, false otherwise
+         */
         block_procedure: function() {
             let ident_name;
             let param_count = 0;
@@ -1183,14 +1188,14 @@ let recursive_descent = (function() {
                 return_type = Symbols_Input_Type[this.last_symbol_value];
                 if (return_type == undefined) {
                     this.error("Failed to determine return type of procedure. Value: " + this.last_symbol_value);
-                    return null;
+                    return false;
                 }
             }
 
             // ident
             if (!this.accept(Symbols.ident)) {
                 this.error("Following identifier is invalid: " + this.last_symbol_value);
-                return null;
+                return false;
             }
 
             ident_name = this.last_symbol_value; // name is valid identifier
@@ -1199,7 +1204,7 @@ let recursive_descent = (function() {
             if (this.get_context_by_name(ident_name) != null) {
                 this.error("Compilation failed because context with name: " + ident_name + ", already exists." + 
                         " Please ensure name: " + ident_name + " is unique.");
-                return null;
+                return false;
             }
 
             let params = [];
@@ -1222,14 +1227,14 @@ let recursive_descent = (function() {
                 // ;
                 if (!this.accept(Symbols.close_bra)) {
                     this.error("Procedure paramater declaration must be closed by ')'");
-                    return null;
+                    return false;
                 }
             }
 
             // ;
             if (!this.accept(Symbols.semicolon)) {
                 this.error("Procedure (" + ident_name + ") header (declaration) must end with ';'");
-                return null;
+                return false;
             }
             
             // block
@@ -1237,20 +1242,20 @@ let recursive_descent = (function() {
             let block_start = 0;
             if ((block_start = this.block(params)) === false) {
                 this.error("Failed to compile procedure (" + ident_name + ") body.");
-                return null;
+                return false;
             }
             current_context.c_address = block_start;
 
             // decrease level counter because we are returning
             this.level_counter--;
 
-            return params;
+            return true;
         },
 
-
-        // statement functions
-
-
+        /**
+         * Part of statement grammar: ident ":=" expression 
+         * @returns true on success, false otherwise
+         */
         statement_ident: function() {
             // simple version: ident := expression; // where ; is checked by caller
             // multiple assignments: ident := ident := ident := expression; // problem: ident can expression - how to determine when it ends?
@@ -1291,6 +1296,10 @@ let recursive_descent = (function() {
             return true;
         },
 
+        /**
+         * Part of statement grammar: "{" ident {, ident} "} := {" value{, value} "}" 
+         * @returns true on success, false otherwise
+         */
         statement_open_curl: function() {
             let ident_counter = 0;
             let vars = [];
@@ -1375,6 +1384,10 @@ let recursive_descent = (function() {
             return true;
         },
 
+        /**
+         * Part of statement grammar: "call" ident ["(" expression {"," expression } ")"]
+         * @returns true on success, false otherwise
+         */
         statement_call: function() {
             // call verified by caller
             this.accept(Symbols.call);
@@ -1417,8 +1430,6 @@ let recursive_descent = (function() {
                         return false;
                     }
 
-                    // push_instruction(Instructions.STO, 0, context.c_var_count - context.c_par_count + i);
-
                     i++;
                     if (i > context.c_par_count) {
                         this.error("The call has more parameters then the procedure defines.");
@@ -1441,6 +1452,11 @@ let recursive_descent = (function() {
             return context.c_return_type;
         },
 
+        /**
+         * Part of statement grammar: "?" ident
+         * NOTE: does nothing. Its for some ancient action. Only kept to have backwards compatibility to PL/0.
+         * @returns true on success, false otherwise
+         */
         statement_quest_mark: function() {
             // ? verified by caller
             this.accept(Symbols.quest_mark)
@@ -1455,6 +1471,11 @@ let recursive_descent = (function() {
             return true;
         },
 
+        /**
+         * Part of statement grammar: "!" expression
+         * NOTE: does nothing. Its for some ancient action. Only kept to have backwards compatibility to PL/0.
+         * @returns true on success, false otherwise
+         */
         statement_excl_mark: function() {
             // ! verified by caller
             this.accept(Symbols.excl_mark);
@@ -1469,6 +1490,10 @@ let recursive_descent = (function() {
             return true;
         },
 
+        /**
+         * Part of statement grammar: "begin" statement {";" statement } "end" 
+         * @returns true on success, false otherwise
+         */
         statement_begin: function() {
             // begin verified by caller
             this.accept(Symbols.begin);
@@ -1486,6 +1511,10 @@ let recursive_descent = (function() {
             return true;
         },
 
+        /**
+         * Part of statement grammar: "if" condition_expression "then" statement [ "else" statement ]
+         * @returns true on success, false otherwise
+         */
         statement_if: function() {
             // if verified by caller
             this.accept(Symbols.if);
@@ -1530,6 +1559,10 @@ let recursive_descent = (function() {
             return true;
         },
 
+        /**
+         * Part of statement grammar: "(" condition_expression ") ? " expression ":" expression
+         * @returns true on success, false otherwise
+         */
         statement_open_bra: function() {
             // ( verified by caller
             this.accept(Symbols.open_bra);
@@ -1586,6 +1619,10 @@ let recursive_descent = (function() {
             return true;
         },
 
+        /**
+         * Part of statement grammar: "while" condition_expression "do" statement
+         * @returns true on success, false otherwise
+         */
         statement_while: function() {
             // while verified by caller
             this.accept(Symbols.while);
@@ -1616,6 +1653,10 @@ let recursive_descent = (function() {
             return true;
         },
 
+        /**
+         * Part of statement grammar: "for" expression "to" expression "do" statement
+         * @returns true on success, false otherwise
+         */
         statement_for: function() {
             // for verified by caller
             this.accept(Symbols.for);
@@ -1683,6 +1724,10 @@ let recursive_descent = (function() {
             return true;
         },
 
+        /**
+         * Part of statement grammar: "return" expression
+         * @returns true on success, false otherwise
+         */
         statement_return: function() {
             // return verified by caller
             this.accept(Symbols.return);
@@ -1707,6 +1752,11 @@ let recursive_descent = (function() {
             return true;
         },
 
+        /**
+         * Part of statement grammar: "begin" statement {";" statement } "end" 
+         * NOTE: must be separeted from "begin" to get it to work properly
+         * @returns true on success, false otherwise
+         */
         statement_end: function() {
             return this.accept(Symbols.end);
         }

@@ -96,7 +96,7 @@ factor = ident | number | "(" expression ")";
                   | "!" expression 
                   | "begin" statement {";" statement } "end" 
                   | "if" condition_expression "then" statement [ "else" statement ]
-                  | "(" condition_expression ") ? " expression ":" expression
+                  | "(" condition_expression ") ? " statement ":" statement
                   | "while" condition_expression "do" statement
                   | "for" expression "to" expression "do" statement
                   | "return" expression ];
